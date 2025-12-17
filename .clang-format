@@ -1,7 +1,6 @@
----
 Language: Cpp
 BasedOnStyle: LLVM
-Standard: c++23
+Standard: c++20 # We're using C++23 but my version of clang-format doesn't support it yet
 IndentWidth: 4
 TabWidth: 4
 UseTab: Never
