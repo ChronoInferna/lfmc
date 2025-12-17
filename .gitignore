@@ -39,3 +39,29 @@
 
 # debug information files
 *.dwo
+
+# CMake build artifacts
+build/
+build*/
+cmake-build-*/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Conan package manager
+conan.lock
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
