@@ -19,9 +19,6 @@ option(LFMC_BUILD_TESTS "Build tests" ON)
 option(LFMC_BUILD_EXAMPLES "Build examples" ON)
 option(LFMC_BUILD_DOCS "Build documentation" OFF)
 
-# Include directories
-include_directories(${PROJECT_SOURCE_DIR}/include)
-
 # Add subdirectories
 add_subdirectory(src)
 
