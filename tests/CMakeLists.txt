@@ -7,9 +7,10 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
   GIT_TAG v3.11.0   # Specify the version you want
 )
+FetchContent_MakeAvailable(Catch2)
 
-# Find Catch2
-find_package(Catch2 3 REQUIRED)
+# Find Catch2 (if locally installed, otherwise use FetchContent)
+# find_package(Catch2 3 REQUIRED)
 
 include(CTest)
 include(Catch)
