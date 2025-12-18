@@ -9,7 +9,7 @@
       "name": "base",
       "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build-${presetName}",
+      "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
@@ -17,6 +17,7 @@
     {
       "name": "debug",
       "inherits": "base",
+      "binaryDir": "${sourceDir}/build-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       }
@@ -24,6 +25,7 @@
     {
       "name": "release",
       "inherits": "base",
+      "binaryDir": "${sourceDir}/build-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
@@ -31,6 +33,7 @@
     {
       "name": "clang-debug",
       "inherits": "debug",
+      "binaryDir": "${sourceDir}/build-clang-debug",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++"
@@ -39,9 +42,19 @@
     {
       "name": "gcc-debug",
       "inherits": "debug",
+      "binaryDir": "${sourceDir}/build-gcc-debug",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "gcc",
         "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "msvc-debug",
+      "inherits": "debug",
+      "binaryDir": "${sourceDir}/build-msvc-debug",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl"
       }
     }
   ],
@@ -66,4 +79,3 @@
     }
   ]
 }
-
