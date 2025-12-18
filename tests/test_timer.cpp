@@ -5,7 +5,6 @@
 
 TEST_CASE("Timer measures elapsed time correctly", "[Timer]") {
     lfmc::Timer timer;
-    timer.start();
     // Simulate some work with a sleep
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     auto elapsed = timer.elapsedMilliseconds();
@@ -14,12 +13,11 @@ TEST_CASE("Timer measures elapsed time correctly", "[Timer]") {
 
 TEST_CASE("Timer can be restarted", "[Timer]") {
     lfmc::Timer timer;
-    timer.start();
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     auto firstElapsed = timer.elapsedMilliseconds();
     REQUIRE(firstElapsed >= 50);
 
-    timer.start(); // Restart the timer
+    timer.reset(); // Restart the timer
     std::this_thread::sleep_for(std::chrono::milliseconds(70));
     auto secondElapsed = timer.elapsedMilliseconds();
     REQUIRE(secondElapsed >= 70);

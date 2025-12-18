@@ -2,7 +2,7 @@
 
 namespace lfmc {
 
-void Timer::start() {
+void Timer::reset() {
     start_time_ = std::chrono::high_resolution_clock::now();
 }
 
