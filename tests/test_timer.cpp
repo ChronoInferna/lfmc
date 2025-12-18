@@ -29,13 +29,12 @@ TEST_CASE("Timer without start returns zero elapsed time", "[Timer]") {
     REQUIRE(elapsed == 0);
 }
 
-// TODO not sure what we want to do with ScopedTimer yet
-// TEST_CASE("ScopedTimer measures elapsed time correctly", "[ScopedTimer]") {
-//     long long elapsed = 0;
-//     {
-//         lfmc::ScopedTimer scopedTimer(elapsed);
-//         // Simulate some work with a sleep
-//         std::this_thread::sleep_for(std::chrono::milliseconds(150));
-//     }
-//     REQUIRE(elapsed >= 150);
-// }
+TEST_CASE("ScopedTimer measures elapsed time correctly", "[ScopedTimer]") {
+    long long elapsed = 0;
+    {
+        lfmc::ScopedTimer scopedTimer(elapsed);
+        // Simulate some work with a sleep
+        std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    }
+    REQUIRE(elapsed >= 150);
+}
