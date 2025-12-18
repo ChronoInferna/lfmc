@@ -12,8 +12,7 @@ class Timer {
     Timer() : start_time_(std::chrono::high_resolution_clock::now()) {}
     ~Timer() = default;
 
-    void start();
-    void stop();
+    void reset();
     long long elapsedMilliseconds() const;
 };
 
