@@ -16,28 +16,37 @@ target_include_directories(lfmc
 
 target_compile_features(lfmc PUBLIC cxx_std_23)
 
-# Warnings
-target_compile_options(lfmc
-    PRIVATE
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wconversion
-        -Wshadow
+add_library(project_warnings INTERFACE)
+
+# Comiler-specific warning flags
+target_compile_options(project_warnings INTERFACE
+  $<$<CXX_COMPILER_ID:GNU,Clang>:
+    -Wall
+    -Wextra
+    -Wpedantic
+    -Wconversion
+    -Wshadow
+  >
+  $<$<CXX_COMPILER_ID:MSVC>:
+    /W4
+    /permissive-
+  >
 )
+
+target_link_libraries(lfmc PRIVATE project_warnings)
 
 # Config-specific flags
 target_compile_options(lfmc
     PRIVATE
-        $<$<CONFIG:Debug>:-O0 -g>
-        $<$<CONFIG:Release>:-O3 -DNDEBUG>
+        # GCC/Clang
+        $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:GNU,Clang>>:-O0 -g>
+        $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:GNU,Clang>>:-O3 -DNDEBUG>
+
+        # MSVC
+        $<$<AND:$<CONFIG:Debug>,$<CXX_COMPILER_ID:MSVC>>:/Od /Zi>
+        $<$<AND:$<CONFIG:Release>,$<CXX_COMPILER_ID:MSVC>>:/O2 /DNDEBUG>
 )
 
-# Optional: compiler-specific guards
-# target_compile_options(lfmc
-#     PRIVATE
-#         $<$<CXX_COMPILER_ID:GNU,Clang>:-fno-omit-frame-pointer>
-# )
 
 # Installation rules
 install(TARGETS lfmc

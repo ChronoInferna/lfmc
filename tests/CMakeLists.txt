@@ -2,6 +2,8 @@
 
 include(FetchContent)
 
+# TODO CI has to install the entirety of Catch2 which takes a lot of time - is there an optimization?
+# Using FetchContent to download Catch2
 FetchContent_Declare(
   Catch2
   GIT_REPOSITORY https://github.com/catchorg/Catch2.git
