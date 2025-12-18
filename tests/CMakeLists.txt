@@ -1,5 +1,13 @@
 # Tests for lfmc
 
+include(FetchContent)
+
+FetchContent_Declare(
+  Catch2
+  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+  GIT_TAG v3.11.0   # Specify the version you want
+)
+
 # Find Catch2
 find_package(Catch2 3 REQUIRED)
 
