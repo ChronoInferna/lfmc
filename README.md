@@ -25,11 +25,11 @@ lfmc/
 
 ## Building
 
+There are currently 6 presets: base, debug, release, clang-debug, gcc-debug, and msvc-debug.
+
 ```bash
-mkdir build
-cd build
-cmake ..
-cmake --build .
+cmake --preset <preset-name>
+cmake --build --preset <preset-name>
 ```
 
 ### Build Options
@@ -37,6 +37,12 @@ cmake --build .
 - `LFMC_BUILD_TESTS`: Build tests (default: ON)
 - `LFMC_BUILD_EXAMPLES`: Build examples (default: ON)
 - `LFMC_BUILD_DOCS`: Build documentation (default: OFF)
+
+### Testing
+
+```bash
+ctest --preset <preset-name>
+```
 
 ## Usage
 
