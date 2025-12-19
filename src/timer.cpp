@@ -7,9 +7,8 @@ void Timer::reset() {
 }
 
 long long Timer::elapsedMilliseconds() const {
-    auto duration =
-        std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - start_time_).count();
-    return duration;
+    return std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - start_time_)
+        .count();
 }
 
 ScopedTimer::~ScopedTimer() noexcept {
