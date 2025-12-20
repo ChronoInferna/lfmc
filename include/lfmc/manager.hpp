@@ -31,9 +31,8 @@ class Manager {
 
   private:
     // Internal data structures for managing processes and schemes will be added here
-    // TODO decide on the appropriate strategy implementation - refer to notes and design patterns
-    // TODO figure out how processes and schemes will interact with each other and decide
-    // appropriate pattern
+    // TODO decide on the appropriate strategy implementation - refer to notes and design patterns -
+    // runtime vs. compile-time determines more
 };
 
 } // namespace lfmc
