@@ -1,7 +1,5 @@
 # Documentation build configuration
-# Placeholder for Doxygen or other documentation tools
 
-# Example Doxygen configuration:
 # find_package(Doxygen)
 # if(DOXYGEN_FOUND)
 #     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
