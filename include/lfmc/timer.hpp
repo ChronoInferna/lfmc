@@ -26,7 +26,7 @@ class Timer {
     using clock = std::chrono::high_resolution_clock;
 
   public:
-    /// Constructor initializes and starts the timer.
+    /// Constructor
     Timer() noexcept : start_time_(clock::now()) {}
 
     /// Resets the timer to the current time.
