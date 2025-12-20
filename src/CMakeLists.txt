@@ -1,8 +1,11 @@
 # Source files for the lfmc library
-set(LFMC_SOURCES
-    lfmc.cpp
-    timer.cpp
-)
+# set(LFMC_SOURCES
+#     lfmc.cpp
+#     timer.cpp
+# )
+
+# Set all .cpp files in src/ as sources
+file(GLOB LFMC_SOURCES "*.cpp")
 
 # Create library
 add_library(lfmc ${LFMC_SOURCES})
