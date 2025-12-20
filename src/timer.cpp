@@ -2,11 +2,11 @@
 
 namespace lfmc {
 
-void Timer::reset() {
+void Timer::reset() noexcept {
     start_time_ = clock::now();
 }
 
-long long Timer::elapsedMilliseconds() const {
+long long Timer::elapsedMilliseconds() const noexcept {
     return std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - start_time_)
         .count();
 }
