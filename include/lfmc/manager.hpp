@@ -1,7 +1,8 @@
 #pragma once
-
 #include "lfmc/process.hpp"
 #include "lfmc/scheme.hpp"
+
+#include <memory>
 
 /**
  * @file manager.hpp
@@ -24,15 +25,26 @@ namespace lfmc {
  * allowing for dynamic selection and management of different strategies at runtime.
  */
 class Manager {
+    // TODO as a starting point, we use runtime polymorphism to manage strategies
   public:
-    /// Constructor
-    Manager() = default;
-    // Additional methods for managing processes and schemes will be added here
+    explicit Manager(std::unique_ptr<Process>&& process = {}, std::unique_ptr<Scheme>&& scheme = {})
+        : scheme_(std::move(scheme)), process_(std::move(process)) {}
+
+    // TODO move to implementation file once actual design is fleshed out
+    void setScheme(std::unique_ptr<Scheme>&& scheme) {
+        scheme_ = std::move(scheme);
+    }
+    void setProcess(std::unique_ptr<Process>&& process) {
+        process_ = std::move(process);
+    }
 
   private:
-    // Internal data structures for managing processes and schemes will be added here
+    // TODO Internal data structures for managing processes and schemes will be added here
     // TODO decide on the appropriate strategy implementation - refer to notes and design patterns -
-    // runtime vs. compile-time determines more
+    // runtime vs. compile-time
+
+    std::unique_ptr<Scheme> scheme_;
+    std::unique_ptr<Process> process_;
 };
 
 } // namespace lfmc
