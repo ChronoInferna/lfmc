@@ -1,5 +1,4 @@
 # lfmc
-Lock-free Monte Carlo
 
 ## Description
 
