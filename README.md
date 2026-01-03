@@ -52,7 +52,17 @@ find_package(lfmc REQUIRED)
 target_link_libraries(your_target PRIVATE lfmc)
 ```
 
+## Tech Stack
+
+| Technology     | Purpose                                     |
+| -------------- | ------------------------------------------- |
+| C++23          | C++23 standard for modern tools             |
+| Ninja          | Build system generator for efficient builds |
+| CMake          | Build configuration and management          |
+| Catch2         | Unit testing framework                      |
+| Doxygen        | Documentation generation                    |
+| GitHub Actions | CI/CD                                       |
+
 ## License
 
 See LICENSE file for details.
-
