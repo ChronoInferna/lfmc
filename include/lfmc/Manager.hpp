@@ -48,6 +48,8 @@ template <StochasticProcess P, NumericalScheme<P> S> class Manager {
         strategy_ = std::move(strategy);
     }
 
+    // TODO big 5? do we even need it?
+
   private:
     P process_;
     S scheme_;
