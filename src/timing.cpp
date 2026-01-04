@@ -1,4 +1,4 @@
-#include "lfmc/timer.hpp"
+#include "lfmc/timing.hpp"
 
 namespace lfmc {
 

@@ -3,7 +3,7 @@
 #include <chrono>
 
 /**
- * @file timer.hpp
+ * @file timing.hpp
  * @brief High-resolution Timer and Scoped Timer classes for measuring elapsed time.
  *
  * This file defines two classes: `Timer` and `ScopedTimer`.

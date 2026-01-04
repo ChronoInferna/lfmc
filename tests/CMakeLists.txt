@@ -17,7 +17,7 @@ include(CTest)
 include(Catch)
 
 set(TEST_SOURCES
-    test_timer.cpp
+    test_timing.cpp
     test_process.cpp
     test_scheme.cpp
 )
