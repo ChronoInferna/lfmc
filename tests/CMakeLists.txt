@@ -19,9 +19,13 @@ include(Catch)
 set(TEST_SOURCES
     test_timer.cpp
     test_process.cpp
+    test_scheme.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
 target_link_libraries(tests PRIVATE lfmc Catch2::Catch2WithMain)
 
-catch_discover_tests(tests)
+catch_discover_tests(
+    tests
+    ADD_TAGS_AS_LABELS
+)
