@@ -1,6 +1,6 @@
 # Source files for the lfmc library
 set(LFMC_SOURCES
-    timer.cpp
+    timing.cpp
 )
 
 # Create library
