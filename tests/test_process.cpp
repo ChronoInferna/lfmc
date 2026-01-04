@@ -36,7 +36,7 @@ TEST_CASE("StochasticProcess concept works correctly", "[StochasticProcess]") {
 }
 
 TEST_CASE("GeometricBrownianMotion computes drift and diffusion correctly",
-          "[GeometricBrownianMotion]") {
+          "[StochasticProcess][GeometricBrownianMotion]") {
     lfmc::GeometricBrownianMotion gbm{.mu = 0.1, .sigma = 0.2};
 
     double x = 100.0;
