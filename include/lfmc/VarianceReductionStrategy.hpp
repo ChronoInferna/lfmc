@@ -21,7 +21,8 @@ namespace lfmc {
  */
 class VarianceReductionStrategy {
   public:
-    virtual ~VarianceReductionStrategy() = default;
+    /// @brief Pure virtual destructor to ensure proper cleanup of derived classes.
+    virtual ~VarianceReductionStrategy() = 0;
 
     /**
      * @brief Apply the variance reduction technique to the input data.
@@ -29,6 +30,19 @@ class VarianceReductionStrategy {
      * @return The modified data after applying the variance reduction technique.
      */
     virtual double apply(double data) const noexcept = 0;
+};
+
+/// @brief Definition of the pure virtual destructor.
+inline VarianceReductionStrategy::~VarianceReductionStrategy() = default;
+
+class NoVarianceReduction : public VarianceReductionStrategy {
+  public:
+    NoVarianceReduction() noexcept = default;
+    ~NoVarianceReduction() noexcept override = default;
+
+    double apply(double data) const noexcept override {
+        return data; // No modification
+    }
 };
 
 } // namespace lfmc
