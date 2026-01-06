@@ -3,6 +3,7 @@
 #include "StochasticProcess.hpp"
 #include "VarianceReductionStrategy.hpp"
 
+// #include <expected> TODO
 #include <memory>
 
 /**
@@ -37,8 +38,9 @@ template <StochasticProcess P, NumericalScheme<P> S> class Manager {
      * @param strategy Optional variance reduction strategy instance.
      */
     explicit Manager(P process, S scheme,
-                     std::unique_ptr<VarianceReductionStrategy>&& strategy = {}) noexcept
-        : process_(process), scheme_(scheme), strategy_(std::move(strategy)) {}
+                     std::unique_ptr<VarianceReductionStrategy> strategy) noexcept
+        : process_(std::move(process)), scheme_(std::move(scheme)), strategy_(std::move(strategy)) {
+    }
 
     /**
      * @brief Set the variance reduction strategy at runtime.
@@ -46,6 +48,22 @@ template <StochasticProcess P, NumericalScheme<P> S> class Manager {
      */
     void setStrategy(std::unique_ptr<VarianceReductionStrategy>&& strategy) noexcept {
         strategy_ = std::move(strategy);
+    }
+
+    /**
+     * @brief Simulate a single step of the stochastic process using the numerical scheme
+     *        and apply the variance reduction strategy.
+     *
+     * @param x The current state variable.
+     * @param dt The time step size.
+     * @param dW The Wiener increment.
+     * @return The next state variable after applying the variance reduction strategy,
+     *         or an error message if the strategy is not set.
+     */
+    double simulateStep(double x, double dt, double dW) const noexcept {
+        double nextX = scheme_.step(process_, x, dt, dW);
+        double reducedX = strategy_->apply(nextX);
+        return reducedX;
     }
 
     // TODO big 5? do we even need it?

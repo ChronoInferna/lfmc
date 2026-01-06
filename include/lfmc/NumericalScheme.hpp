@@ -35,11 +35,11 @@ concept NumericalScheme =
 /**
  * @brief Euler-Maruyama numerical scheme for solving SDEs.
  *
- * @tparam P The stochastic process type used in the SDE.
- *
  * The Euler-Maruyama method is a simple and widely used numerical scheme for approximating
  * solutions to stochastic differential equations. It is defined by the update rule:
  * X_{n+1} = X_n + drift(X_n) * dt + diffusion(X_n) * dW
+ *
+ * @tparam P The stochastic process type used in the SDE.
  */
 template <StochasticProcess P> struct EulerMaruyama {
     /**
