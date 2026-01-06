@@ -20,7 +20,7 @@ lfmc/
 ## Requirements
 
 - C++23 compatible compiler (GCC 12+, Clang 16+, or MSVC 2022+)
-- CMake 3.25 or higher
+- CMake 3.28 or higher
 
 ## Building
 
