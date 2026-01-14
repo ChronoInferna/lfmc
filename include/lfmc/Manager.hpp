@@ -5,6 +5,9 @@
 
 // #include <expected> TODO
 #include <memory>
+#include <thread>
+#include <variant>
+#include <vector>
 
 /**
  * @file manager.hpp
@@ -17,61 +20,50 @@
 namespace lfmc {
 
 /**
- * @brief Manager class for handling stochastic processes, numerical schemes,
- *        and variance reduction strategies.
+ * @brief Concept for variant types used in variance reduction strategies.
  *
- * The `Manager` class utilizes the Strategy Pattern to manage different stochastic processes and
- * numerical schemes at compile-time, and variance reduction techniques at runtime. It holds
- * instances of a stochastic process, a numerical scheme, and a variance reduction strategy.
+ * A type `T` satisfies the `Variant` concept if it is a `std::variant`
+ * with at least one alternative type.
  *
- * @tparam P The stochastic process type.
- * @tparam S The numerical scheme type.
+ * @tparam T The type to be checked against the concept.
  */
-template <StochasticProcess P, NumericalScheme<P> S> class Manager {
+template <typename T>
+concept Variant = requires { std::variant_size_v<T>; } && std::variant_size_v<T> > 0;
+
+/**
+ * @brief Manager class for handling variance reduction strategies.
+ *
+ * The `Manager` class utilizes the Strategy Pattern to manage different
+ * variance reduction strategies during Monte Carlo simulations. It holds
+ * instances of a stochastic process, a numerical scheme, and a selected
+ * variance reduction strategy.
+ *
+ * @tparam P The type of the stochastic process, satisfying the `StochasticProcess` concept.
+ * @tparam S The type of the numerical scheme, satisfying the `NumericalScheme` concept, which
+ * involves having the correct process_type P.
+ * @tparam VRVariant A variant type containing different variance reduction strategies,
+ *                   satisfying the `Variant` concept.
+ */
+template <StochasticProcess P, NumericalScheme S, Variant VRVariant> class Manager {
   public:
-    /**
-     * @brief Construct a Manager with the given stochastic process, numerical scheme,
-     *        and optional variance reduction strategy.
-     *
-     * @param process The stochastic process instance.
-     * @param scheme The numerical scheme instance.
-     * @param strategy Optional variance reduction strategy instance.
-     */
     explicit Manager(P process, S scheme,
-                     std::unique_ptr<VarianceReductionStrategy> strategy) noexcept
-        : process_(std::move(process)), scheme_(std::move(scheme)), strategy_(std::move(strategy)) {
-    }
+                     std::unique_ptr<VarianceReductionStrategy> strategy =
+                         std::make_unique<lfmc::NoVarianceReduction>()) noexcept
+        : process_(std::move(process)), scheme_(std::move(scheme)),
+          currentStrategy_(std::move(strategy)) {}
 
-    /**
-     * @brief Set the variance reduction strategy at runtime.
-     * @param strategy The new variance reduction strategy to be used.
-     */
-    void setStrategy(std::unique_ptr<VarianceReductionStrategy>&& strategy) noexcept {
-        strategy_ = std::move(strategy);
-    }
-
-    /**
-     * @brief Simulate a single step of the stochastic process using the numerical scheme
-     *        and apply the variance reduction strategy.
-     *
-     * @param x The current state variable.
-     * @param dt The time step size.
-     * @param dW The Wiener increment.
-     * @return The next state variable after applying the variance reduction strategy,
-     *         or an error message if the strategy is not set.
-     */
-    double simulateStep(double x, double dt, double dW) const noexcept {
-        double nextX = scheme_.step(process_, x, dt, dW);
-        double reducedX = strategy_->apply(nextX);
-        return reducedX;
-    }
-
-    // TODO big 5? do we even need it?
+    // TODO Randomness here? Or in GBM?
 
   private:
     P process_;
     S scheme_;
-    std::unique_ptr<VarianceReductionStrategy> strategy_;
+
+    std::unique_ptr<VarianceReductionStrategy> currentStrategy_;
+
+    static constexpr std::size_t numStrategies = std::variant_size_v<VRVariant>;
+    std::array<VRVariant, numStrategies> testingThreads;
+
+    std::vector<std::thread> realThreads;
 };
 
 } // namespace lfmc
