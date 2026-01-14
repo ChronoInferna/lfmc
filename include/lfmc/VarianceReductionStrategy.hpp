@@ -4,6 +4,7 @@
 // Examples include Antithetic Variates, Control Variates, Importance Sampling, etc.
 // First must decide how to design parallel infrastructure to support these techniques in Monte
 // Carlo simulations.
+// TODO each strategy has a window parameter for how much data you're using
 
 /**
  * @file VarianceReductionStrategy.hpp
