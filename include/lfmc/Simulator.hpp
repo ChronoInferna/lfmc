@@ -2,26 +2,60 @@
 #include "StochasticProcess.hpp"
 #include "VarianceReductionStrategy.hpp"
 
-#include <memory>
+// TODO
+// #include <barrier>
+// #include <memory>
 #include <thread>
 
 namespace lfmc {
 
+/* @brief Simulator worker class that runs Monte Carlo simulations using a specified stochastic
+ * process, numerical scheme, and variance reduction strategy.
+ *
+ * This class is responsible for executing simulations in a separate thread, applying the chosen
+ * variance reduction technique to improve the efficiency of the Monte Carlo method.
+ *
+ * @tparam P The type of the stochastic process, must satisfy the StochasticProcess concept.
+ * @tparam S The type of the numerical scheme, must satisfy the NumericalScheme concept and be
+ * associated with the stochastic process P.
+ */
 template <StochasticProcess P, NumericalScheme S>
     requires std::same_as<typename S::process_type, P>
 class Simulator {
   public:
-    explicit Simulator(std::unique_ptr<VarianceReductionStrategy> strategy) noexcept
-        : currentStrategy_(std::move(strategy)) {}
+    // NOTE VRS is const pointer since we do not need ownership - alternatively use shared_ptr but
+    // probably overkill?
+    explicit Simulator(const P& process, const S& scheme,
+                       const VarianceReductionStrategy& strategy) noexcept
+        : process_(process), scheme_(scheme), currentStrategy_(&strategy),
+          thread_(&Simulator::simulate(), this) {}
+    // TODO how to actually initialize thread?
+    // TODO destructor
 
     // TODO change return type?
-    void setStrategy(std::unique_ptr<VarianceReductionStrategy> strategy) {
-        currentStrategy_ = std::move(strategy);
+    void setStrategy(const VarianceReductionStrategy& strategy) noexcept {
+        currentStrategy_ = &strategy;
+        // Restart thread?
+        // this->restartThread();
     }
 
+    // TODO update atomic? some way for the test threads to update some shared state to indicate
+    // which is the best
+
+    // void restartThread();
+
   private:
-    std::jthread thread;
-    std::unique_ptr<VarianceReductionStrategy> currentStrategy_;
-    int window;
+    std::jthread thread_;
+    // std::barrier state_;
+
+    // TODO function that actually simulates
+    void simulate() {}
+
+    P process_;
+    S scheme_;
+    const VarianceReductionStrategy* currentStrategy_;
+    // TODO
+    // int window;
 };
+
 } // namespace lfmc

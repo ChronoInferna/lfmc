@@ -21,11 +21,8 @@
 
 namespace lfmc {
 
-template <typename T>
-concept VRStrategy = requires { std::derived_from<VarianceReductionStrategy, T>; };
-
 template <StochasticProcess P, NumericalScheme S, VRStrategy... VRStrategies>
-    requires std::same_as<typename S::process_type, P>
+    requires std::same_as<typename S::process_type, P> && (sizeof...(VRStrategies) > 0)
 class Manager {
   public:
     explicit Manager(P process, S scheme,
@@ -43,14 +40,14 @@ class Manager {
 
     std::unique_ptr<VarianceReductionStrategy> currentStrategy_;
 
-    std::tuple<VRStrategies...> strategies_;
+    // std::tuple<VRStrategies...> strategies_;
     std::array<lfmc::Simulator<P, S>, sizeof...(VRStrategies)> testingThreads;
 
     // std::vector<std::thread> realThreads;
     std::vector<lfmc::Simulator<P, S>> realThreads;
 
-    // TODO do we want make a separate Simulator class that does its own thread of simulations?
-    // Trying to think about how we represent each strategy within each thread
+    // TODO Trying to think about how we represent each strategy within each thread and if managing
+    // threads through a vector of objects is viable
 };
 
 } // namespace lfmc
