@@ -1,4 +1,5 @@
 #pragma once
+#include <concepts>
 
 // TODO: Implement derived classes for specific variance reduction techniques.
 // Examples include Antithetic Variates, Control Variates, Importance Sampling, etc.
@@ -35,6 +36,9 @@ class VarianceReductionStrategy {
 
 /// @brief Definition of the pure virtual destructor.
 inline VarianceReductionStrategy::~VarianceReductionStrategy() = default;
+
+template <typename T>
+concept VRStrategy = requires { std::derived_from<VarianceReductionStrategy, T>; };
 
 class NoVarianceReduction : public VarianceReductionStrategy {
   public:
