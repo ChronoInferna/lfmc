@@ -1,12 +1,14 @@
 #pragma once
 #include "NumericalScheme.hpp"
+#include "Simulator.hpp"
 #include "StochasticProcess.hpp"
 #include "VarianceReductionStrategy.hpp"
 
-// #include <expected> TODO
+// TODO
+// #include <expected>
 #include <memory>
-#include <thread>
-#include <variant>
+// TODO
+// #include <thread>
 #include <vector>
 
 /**
@@ -19,51 +21,36 @@
 
 namespace lfmc {
 
-/**
- * @brief Concept for variant types used in variance reduction strategies.
- *
- * A type `T` satisfies the `Variant` concept if it is a `std::variant`
- * with at least one alternative type.
- *
- * @tparam T The type to be checked against the concept.
- */
 template <typename T>
-concept Variant = requires { std::variant_size_v<T>; } && std::variant_size_v<T> > 0;
+concept VRStrategy = requires { std::derived_from<VarianceReductionStrategy, T>; };
 
-/**
- * @brief Manager class for handling variance reduction strategies.
- *
- * The `Manager` class utilizes the Strategy Pattern to manage different
- * variance reduction strategies during Monte Carlo simulations. It holds
- * instances of a stochastic process, a numerical scheme, and a selected
- * variance reduction strategy.
- *
- * @tparam P The type of the stochastic process, satisfying the `StochasticProcess` concept.
- * @tparam S The type of the numerical scheme, satisfying the `NumericalScheme` concept, which
- * involves having the correct process_type P.
- * @tparam VRVariant A variant type containing different variance reduction strategies,
- *                   satisfying the `Variant` concept.
- */
-template <StochasticProcess P, NumericalScheme S, Variant VRVariant> class Manager {
+template <StochasticProcess P, NumericalScheme S, VRStrategy... VRStrategies>
+    requires std::same_as<typename S::process_type, P>
+class Manager {
   public:
     explicit Manager(P process, S scheme,
-                     std::unique_ptr<VarianceReductionStrategy> strategy =
-                         std::make_unique<lfmc::NoVarianceReduction>()) noexcept
+                     std::unique_ptr<VarianceReductionStrategy> strategy) noexcept
         : process_(std::move(process)), scheme_(std::move(scheme)),
           currentStrategy_(std::move(strategy)) {}
-
-    // TODO Randomness here? Or in GBM?
+    explicit Manager(P process, S scheme)
+        : Manager(std::move(process), std::move(scheme),
+                  std::make_unique<lfmc::NoVarianceReduction>()) {}
 
   private:
+    // TODO do we need these?
     P process_;
     S scheme_;
 
     std::unique_ptr<VarianceReductionStrategy> currentStrategy_;
 
-    static constexpr std::size_t numStrategies = std::variant_size_v<VRVariant>;
-    std::array<VRVariant, numStrategies> testingThreads;
+    std::tuple<VRStrategies...> strategies_;
+    std::array<lfmc::Simulator<P, S>, sizeof...(VRStrategies)> testingThreads;
 
-    std::vector<std::thread> realThreads;
+    // std::vector<std::thread> realThreads;
+    std::vector<lfmc::Simulator<P, S>> realThreads;
+
+    // TODO do we want make a separate Simulator class that does its own thread of simulations?
+    // Trying to think about how we represent each strategy within each thread
 };
 
 } // namespace lfmc
