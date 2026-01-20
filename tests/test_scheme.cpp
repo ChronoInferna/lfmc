@@ -18,8 +18,6 @@ struct ValidProcess {
 };
 
 template <lfmc::StochasticProcess P> struct ValidScheme {
-    using process_type = P;
-
     double step(P const& process, double x, double dt, double dW) const noexcept {
         return x + process.drift(x) * dt + process.diffusion(x) * dW;
     }
@@ -30,8 +28,6 @@ struct InvalidSchemeNoStep {
 };
 
 template <lfmc::StochasticProcess P> struct InvalidSchemeWrongStep {
-    using process_type = P;
-
     int step(P const& process, double x, double dt, double dW) const noexcept {
         return static_cast<int>(x);
     }
@@ -42,9 +38,9 @@ template <lfmc::StochasticProcess P> struct InvalidSchemeWrongStep {
 TEST_CASE("NumericalScheme concept works correctly", "[NumericalScheme]") {
     using namespace test1;
 
-    REQUIRE(lfmc::NumericalScheme<ValidScheme<ValidProcess>>);
-    REQUIRE_FALSE(lfmc::NumericalScheme<InvalidSchemeNoStep>);
-    REQUIRE_FALSE(lfmc::NumericalScheme<InvalidSchemeWrongStep<ValidProcess>>);
+    REQUIRE(lfmc::NumericalScheme<ValidScheme<ValidProcess>, ValidProcess>);
+    REQUIRE_FALSE(lfmc::NumericalScheme<InvalidSchemeNoStep, ValidProcess>);
+    REQUIRE_FALSE(lfmc::NumericalScheme<InvalidSchemeWrongStep<ValidProcess>, ValidProcess>);
 };
 
 TEST_CASE("EulerMaruyama computes next step correctly", "[NumericalScheme][EulerMaruyama]") {
