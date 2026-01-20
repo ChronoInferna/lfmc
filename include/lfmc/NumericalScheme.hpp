@@ -26,12 +26,10 @@ namespace lfmc {
  * @param dt The time step size.
  * @param dW The Wiener increment.
  */
-template <typename S>
-concept NumericalScheme =
-    requires { typename S::process_type; } && StochasticProcess<typename S::process_type> &&
-    requires(S const& s, typename S::process_type const& p, double x, double dt, double dW) {
-        { s.step(p, x, dt, dW) } -> std::same_as<double>;
-    };
+template <typename S, typename P>
+concept NumericalScheme = requires(S const& s, P const& p, double x, double dt, double dW) {
+    { s.step(p, x, dt, dW) } -> std::same_as<double>;
+};
 
 /**
  * @brief Euler-Maruyama numerical scheme for solving SDEs.
@@ -43,9 +41,6 @@ concept NumericalScheme =
  * @tparam P The stochastic process type used in the SDE.
  */
 template <StochasticProcess P> struct EulerMaruyama {
-    // Expose the process type for compatibility with the concept
-    using process_type = P;
-
     /**
      * @brief Compute the next state using the Euler-Maruyama method.
      * @param process The stochastic process defining the SDE.

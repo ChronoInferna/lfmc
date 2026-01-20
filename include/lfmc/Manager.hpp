@@ -1,6 +1,6 @@
 #pragma once
 #include "NumericalScheme.hpp"
-#include "Simulator.hpp"
+// #include "Simulator.hpp"
 #include "StochasticProcess.hpp"
 #include "VarianceReductionStrategy.hpp"
 
@@ -21,8 +21,8 @@
 
 namespace lfmc {
 
-template <StochasticProcess P, NumericalScheme S, VRStrategy... VRStrategies>
-    requires std::same_as<typename S::process_type, P> && (sizeof...(VRStrategies) > 0)
+template <StochasticProcess P, NumericalScheme<P> S, VRStrategy... VRStrategies>
+    requires(sizeof...(VRStrategies) > 0)
 class Manager {
   public:
     explicit Manager(P process, S scheme,
@@ -41,10 +41,10 @@ class Manager {
     std::unique_ptr<VarianceReductionStrategy> currentStrategy_;
 
     // std::tuple<VRStrategies...> strategies_;
-    std::array<lfmc::Simulator<P, S>, sizeof...(VRStrategies)> testingThreads;
+    // std::array<lfmc::Simulator<P, S>, sizeof...(VRStrategies)> testingThreads;
 
     // std::vector<std::thread> realThreads;
-    std::vector<lfmc::Simulator<P, S>> realThreads;
+    // std::vector<lfmc::Simulator<P, S>> realThreads;
 
     // TODO Trying to think about how we represent each strategy within each thread and if managing
     // threads through a vector of objects is viable

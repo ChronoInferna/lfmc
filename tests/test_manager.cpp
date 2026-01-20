@@ -4,9 +4,7 @@
 #include <memory>
 
 TEST_CASE("Manager initializes", "[Manager]") {
-    // Define a variant type for variance reduction strategies
-    using VRs = std::variant<lfmc::NoVarianceReduction>;
-    // using VRs = std::variant<>; // Used for testing concept
+    using VRs = lfmc::NoVarianceReduction;
 
     SECTION("Initialization with temporaries") {
         REQUIRE_NOTHROW(lfmc::Manager<lfmc::GeometricBrownianMotion,
