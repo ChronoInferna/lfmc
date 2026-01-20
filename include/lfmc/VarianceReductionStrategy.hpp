@@ -38,7 +38,7 @@ class VarianceReductionStrategy {
 inline VarianceReductionStrategy::~VarianceReductionStrategy() = default;
 
 template <typename T>
-concept VRStrategy = requires { std::derived_from<VarianceReductionStrategy, T>; };
+concept VRStrategy = std::derived_from<T, VarianceReductionStrategy>;
 
 class NoVarianceReduction : public VarianceReductionStrategy {
   public:
