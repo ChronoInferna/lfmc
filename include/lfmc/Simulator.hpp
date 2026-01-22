@@ -19,22 +19,18 @@ namespace lfmc {
  * @tparam S The type of the numerical scheme, must satisfy the NumericalScheme concept and be
  * associated with the stochastic process P.
  */
-template <StochasticProcess P, NumericalScheme S>
-    requires std::same_as<typename S::process_type, P>
-class Simulator {
+template <StochasticProcess P, NumericalScheme<P> S> class Simulator {
   public:
     // NOTE VRS is const pointer since we do not need ownership - alternatively use shared_ptr but
-    // probably overkill?
+    // probably overkill? More importantly, will threads outlive the manager that owns the strategy?
     explicit Simulator(const P& process, const S& scheme,
                        const VarianceReductionStrategy& strategy) noexcept
-        : process_(process), scheme_(scheme), currentStrategy_(&strategy),
-          thread_(&Simulator::simulate(), this) {}
+        : process_(process), scheme_(scheme), thread_(&Simulator::simulate(), this) {}
     // TODO how to actually initialize thread?
     // TODO destructor
 
     // TODO change return type?
-    void setStrategy(const VarianceReductionStrategy& strategy) noexcept {
-        currentStrategy_ = &strategy;
+    void setStrategy() noexcept {
         // Restart thread?
         // this->restartThread();
     }
@@ -53,7 +49,6 @@ class Simulator {
 
     P process_;
     S scheme_;
-    const VarianceReductionStrategy* currentStrategy_;
     // TODO
     // int window;
 };
