@@ -56,10 +56,6 @@ struct GeometricBrownianMotion {
      * @return The diffusion term sigma * x.
      */
 
-
-     //aksjbflkjawedfbglisawjebrflgwbselrg
-
-     
     double diffusion(double x) const noexcept {
         return sigma * x;
     }
