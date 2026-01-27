@@ -55,6 +55,11 @@ struct GeometricBrownianMotion {
      * @param x The current state variable.
      * @return The diffusion term sigma * x.
      */
+
+
+     //aksjbflkjawedfbglisawjebrflgwbselrg
+
+     
     double diffusion(double x) const noexcept {
         return sigma * x;
     }
