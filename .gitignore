@@ -54,6 +54,9 @@ _deps/
 .cache/
 Testing/
 
+# CodeQL build artifacts
+_codeql_*
+
 # IDE specific files
 .vscode/
 .idea/
