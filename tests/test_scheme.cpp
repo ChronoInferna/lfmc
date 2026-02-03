@@ -44,14 +44,14 @@ TEST_CASE("NumericalScheme concept works correctly", "[NumericalScheme]") {
 };
 
 TEST_CASE("EulerMaruyama computes next step correctly", "[NumericalScheme][EulerMaruyama]") {
-    lfmc::GeometricBrownianMotion gbm{.mu = 0.1, .sigma = 0.2};
+    lfmc::GeometricBrownianMotion gbm{0.1, 0.2};
     lfmc::EulerMaruyama<lfmc::GeometricBrownianMotion> scheme;
 
     double x = 100.0;
     double dt = 0.01;
     double dW = 0.05;
 
-    double expectedNextX = x + gbm.drift(x) * dt + gbm.diffusion(x) * dW;
+    double expectedNextX = x + gbm.drift(x) * dt + gbm.diffusion(x) * dW * std::sqrt(dt);
     double computedNextX = scheme.step(gbm, x, dt, dW);
 
     REQUIRE_THAT(computedNextX, WithinAbs(expectedNextX, 1e-10));
@@ -75,7 +75,7 @@ TEST_CASE("EulerMaruyama works with different stochastic processes",
     double dt = 0.02;
     double dW = 0.03;
 
-    double expectedNextX = x + process.drift(x) * dt + process.diffusion(x) * dW;
+    double expectedNextX = x + process.drift(x) * dt + process.diffusion(x) * dW * std::sqrt(dt);
     double computedNextX = scheme.step(process, x, dt, dW);
 
     REQUIRE_THAT(computedNextX, WithinAbs(expectedNextX, 1e-10));
