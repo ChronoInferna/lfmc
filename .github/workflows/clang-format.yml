@@ -1,0 +1,49 @@
+name: clang-format
+
+on:
+  push:
+    branches-ignore: [ "main" ]
+  pull_request:
+    branches-ignore: [ "main" ]
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install clang-format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format
+
+    - name: Run clang-format
+      run: |
+        find include src tests examples -type f \( -name "*.cpp" -o -name "*.hpp" -o -name "*.h" -o -name "*.cc" -o -name "*.cxx" \) -exec clang-format -i {} +
+
+    - name: Check for changes
+      id: verify_diff
+      run: |
+        git diff --exit-code || echo "changed=true" >> $GITHUB_OUTPUT
+
+    - name: Commit and push changes
+      if: steps.verify_diff.outputs.changed == 'true' && github.event_name == 'push'
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add -A
+        git commit -m "style: apply clang-format"
+        git push
+
+    - name: Fail on formatting issues in PR
+      if: steps.verify_diff.outputs.changed == 'true' && github.event_name == 'pull_request'
+      run: |
+        echo "Code formatting issues detected. Please run clang-format locally."
+        exit 1
