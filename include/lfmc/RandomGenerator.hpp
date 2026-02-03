@@ -1,4 +1,5 @@
 #pragma once
+
 #include <random>
 #include <vector>
 
@@ -7,18 +8,17 @@ namespace lfmc {
 class RandomGenerator {
   public:
     explicit RandomGenerator(unsigned seed = std::random_device{}())
-        : rng_(seed), normal_dist_(0.0, 1.0) {}
+        : rng_(seed), normalDist_(0.0, 1.0) {}
 
-    std::vector<double> generate_normals(size_t n) {
+    std::vector<double> generateNormals(size_t n) {
         std::vector<double> randoms(n);
-        for (auto& r : randoms) {
-            r = normal_dist_(rng_);
-        }
+        for (auto& r : randoms)
+            r = normalDist_(rng_);
         return randoms;
     }
 
-    double generate_single() {
-        return normal_dist_(rng_);
+    double generateSingle() {
+        return normalDist_(rng_);
     }
 
     void seed(unsigned s) {
@@ -27,7 +27,7 @@ class RandomGenerator {
 
   private:
     std::mt19937 rng_;
-    std::normal_distribution<double> normal_dist_;
+    std::normal_distribution<double> normalDist_;
 };
 
 } // namespace lfmc
