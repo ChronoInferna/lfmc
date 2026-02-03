@@ -1,4 +1,5 @@
 #pragma once
+
 #include <concepts>
 #include <stdexcept>
 
@@ -22,11 +23,11 @@ struct GeometricBrownianMotion {
 
     /**
      * @brief Constructor to initialize GBM parameters.
-     * @param drift_coef The drift coefficient (mu).
-     * @param diffusion_coef The diffusion coefficient (sigma/volatility).
+     * @param driftCoefficient The drift coefficient (mu).
+     * @param diffusionCoefficient The diffusion coefficient (sigma/volatility).
      */
-    GeometricBrownianMotion(double drift_coef, double diffusion_coef)
-        : mu(drift_coef), sigma(diffusion_coef) {
+    GeometricBrownianMotion(double driftCoefficient, double diffusionCoefficient)
+        : mu(driftCoefficient), sigma(diffusionCoefficient) {
         if (sigma < 0.0) {
             throw std::invalid_argument("Diffusion coefficient (sigma) must be non-negative");
         }

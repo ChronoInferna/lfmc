@@ -1,4 +1,5 @@
 #pragma once
+
 #include <concepts>
 
 // TODO: Implement derived classes for specific variance reduction techniques.
