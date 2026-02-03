@@ -1,6 +1,6 @@
 #pragma once
-#include <stdexcept>
 #include <concepts>
+#include <stdexcept>
 
 /**
  * @file StochasticProcess.hpp
