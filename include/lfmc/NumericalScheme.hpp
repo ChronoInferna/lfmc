@@ -1,10 +1,12 @@
 #pragma once
 #include "StochasticProcess.hpp"
+
+#include <cmath>
 #include <concepts>
-#include <cmath>      
-#include <vector>     
-#include <cstddef>    
+#include <cstddef>
 #include <utility>
+#include <vector>
+
 /**
  * @file NumericalScheme.hpp
  * @brief Defines the NumericalScheme concept for numerical methods solving SDEs and
@@ -18,9 +20,8 @@ concept NumericalScheme = requires(S const& s, P const& p, double x, double dt, 
     { s.step(p, x, dt, dW) } -> std::same_as<double>;
 };
 
-template <StochasticProcess P>
-class EulerMaruyama {
-public:
+template <StochasticProcess P> class EulerMaruyama {
+  public:
     explicit EulerMaruyama(P process) : process_(std::move(process)) {}
 
     /**
@@ -46,7 +47,7 @@ public:
      */
     std::vector<double> simulate_path(double x0, double T, size_t n_steps,
                                       std::vector<double> const& random_normals) const {
-        double dt = T / n_steps;
+        double dt = T / static_cast<float>(n_steps);
         std::vector<double> path;
         path.reserve(n_steps + 1);
         path.push_back(x0);
@@ -61,12 +62,12 @@ public:
 
     /**
      * @brief Simulate only the terminal value (no full path).
-     * @param x0 Initial valueector of N(0,1) random variables.
+     * @param x0 Initial value vector of N(0,1) random variables.
      * @return Terminal value X_T.
      */
     double simulate_terminal(double x0, double T, size_t n_steps,
-                            std::vector<double> const& random_normals) const {
-        double dt = T / n_steps;
+                             std::vector<double> const& random_normals) const {
+        double dt = T / static_cast<float>(n_steps);
         double x = x0;
         for (size_t i = 0; i < n_steps; ++i) {
             x = step(x, dt, random_normals[i]);
@@ -74,20 +75,20 @@ public:
         return x;
     }
 
-private:
+  private:
     P process_;
 };
 
 /**
  * @brief Exact simulation for Geometric Brownian Motion.
- * 
+ *
  * Uses the closed-form solution:
  * X_T = X_0 * exp((mu - 0.5*sigma^2)*T + sigma*sqrt(T)*Z)
- * 
+ *
  * This is faster and more accurate than Euler-Maruyama for GBM.
  */
 class GBMExact {
-public:
+  public:
     explicit GBMExact(GeometricBrownianMotion gbm) : gbm_(gbm) {}
 
     /**
@@ -103,7 +104,7 @@ public:
         return x0 * std::exp(drift_adjusted + diffusion_term);
     }
 
-private:
+  private:
     GeometricBrownianMotion gbm_;
 };
 
