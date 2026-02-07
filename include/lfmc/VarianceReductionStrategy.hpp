@@ -17,7 +17,7 @@
 namespace lfmc {
 
 class VarianceReductionStrategy {
-  public:
+public:
     virtual ~VarianceReductionStrategy() = 0;
 
     virtual double apply(double data) noexcept = 0;
@@ -29,12 +29,25 @@ template <typename T>
 concept VRStrategy = std::derived_from<T, VarianceReductionStrategy>;
 
 class NoVarianceReduction : public VarianceReductionStrategy {
-  public:
+public:
     NoVarianceReduction() noexcept = default;
     ~NoVarianceReduction() noexcept override = default;
 
     double apply(double data) noexcept override {
         return data;
+    }
+};
+
+class AntitheticVariates : public VarianceReductionStrategy {
+public:
+    AntitheticVariates() noexcept = default;
+    ~AntitheticVariates() noexcept override = default;
+
+    double apply(double data) noexcept override {
+        // Placeholder implementation - in practice, this would need to be integrated with the
+        // random number generation and path simulation to create antithetic pairs.
+        return data;
+         // Negate the data as a simple example of an antithetic transformation
     }
 };
 
