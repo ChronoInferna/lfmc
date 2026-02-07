@@ -5,7 +5,7 @@
 namespace lfmc {
 
 class RandomGenerator {
-public:
+  public:
     explicit RandomGenerator(unsigned seed = std::random_device{}())
         : rng_(seed), normalDist_(0.0, 1.0) {}
 
@@ -24,11 +24,11 @@ public:
     std::pair<std::vector<double>, std::vector<double>> generateAntitheticPair(size_t n) {
         std::vector<double> randoms = generateNormals(n);
         std::vector<double> antithetic(n);
-        
+
         for (size_t i = 0; i < n; ++i) {
-            antithetic[i] = -randoms[i];  // Negate each random
+            antithetic[i] = -randoms[i]; // Negate each random
         }
-        
+
         return {randoms, antithetic};
     }
 
@@ -36,7 +36,7 @@ public:
         rng_.seed(s);
     }
 
-private:
+  private:
     std::mt19937 rng_;
     std::normal_distribution<double> normalDist_;
 };

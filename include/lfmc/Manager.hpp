@@ -5,16 +5,15 @@
 #include "StochasticProcess.hpp"
 #include "VarianceReductionStrategy.hpp"
 
+#include <cmath>
 #include <memory>
 #include <numeric>
 #include <vector>
-#include <cmath>
 
 namespace lfmc {
 
-template <StochasticProcess P, NumericalScheme<P> S, Payoff PO> 
-class Manager {
-public:
+template <StochasticProcess P, NumericalScheme<P> S, Payoff PO> class Manager {
+  public:
     explicit Manager(P process, S scheme, PO payoff,
                      std::unique_ptr<VarianceReductionStrategy> strategy, double initialValue,
                      double timeToMaturity, size_t stepCount) noexcept
@@ -27,7 +26,7 @@ public:
         if (dynamic_cast<AntitheticVariates*>(currentStrategy_.get())) {
             return simulateAntithetic(numSimulations);
         }
-        
+
         // Standard Monte Carlo
         return simulateStandard(numSimulations);
     }
@@ -37,20 +36,20 @@ public:
         if (dynamic_cast<AntitheticVariates*>(currentStrategy_.get())) {
             return simulateAntitheticWithError(numSimulations);
         }
-        
+
         // Standard Monte Carlo
         return simulateStandardWithError(numSimulations);
     }
 
-private:
+  private:
     // Standard Monte Carlo (no variance reduction)
     double simulateStandard(size_t numSimulations) {
         simulators_.clear();
         simulators_.reserve(numSimulations);
 
         for (size_t i{}; i < numSimulations; ++i) {
-            simulators_.emplace_back(process_, scheme_, payoff_, initialValue_, 
-                                     timeToMaturity_, stepCount_);
+            simulators_.emplace_back(process_, scheme_, payoff_, initialValue_, timeToMaturity_,
+                                     stepCount_);
         }
 
         double totalResult = 0.0;
@@ -66,8 +65,8 @@ private:
         simulators_.reserve(numSimulations);
 
         for (size_t i{}; i < numSimulations; ++i) {
-            simulators_.emplace_back(process_, scheme_, payoff_, initialValue_,
-                                     timeToMaturity_, stepCount_);
+            simulators_.emplace_back(process_, scheme_, payoff_, initialValue_, timeToMaturity_,
+                                     stepCount_);
         }
 
         std::vector<double> results;
@@ -76,8 +75,8 @@ private:
             results.push_back(payoff_(simulator.generateTerminal()));
         }
 
-        double mean = std::accumulate(results.begin(), results.end(), 0.0) / 
-                     static_cast<double>(numSimulations);
+        double mean = std::accumulate(results.begin(), results.end(), 0.0) /
+                      static_cast<double>(numSimulations);
 
         double variance = 0.0;
         for (const auto& r : results)
@@ -91,16 +90,17 @@ private:
     // Antithetic Variates Monte Carlo
     double simulateAntithetic(size_t numPairs) {
         simulators_.clear();
-        simulators_.reserve(1);  // Only need one simulator
-        simulators_.emplace_back(process_, scheme_, payoff_, initialValue_,
-                                timeToMaturity_, stepCount_);
+        simulators_.reserve(1); // Only need one simulator
+        simulators_.emplace_back(process_, scheme_, payoff_, initialValue_, timeToMaturity_,
+                                 stepCount_);
 
         auto& simulator = simulators_[0];
         double totalResult = 0.0;
 
         for (size_t i = 0; i < numPairs; ++i) {
             // Generate antithetic pair
-            auto [randoms, antitheticRandoms] = simulator.getRng().generateAntitheticPair(stepCount_);
+            auto [randoms, antitheticRandoms] =
+                simulator.getRng().generateAntitheticPair(stepCount_);
 
             // Run with original randoms
             double terminal1 = simulator.generateTerminalWithRandoms(randoms);
@@ -120,15 +120,16 @@ private:
     std::pair<double, double> simulateAntitheticWithError(size_t numPairs) {
         simulators_.clear();
         simulators_.reserve(1);
-        simulators_.emplace_back(process_, scheme_, payoff_, initialValue_,
-                                timeToMaturity_, stepCount_);
+        simulators_.emplace_back(process_, scheme_, payoff_, initialValue_, timeToMaturity_,
+                                 stepCount_);
 
         auto& simulator = simulators_[0];
         std::vector<double> pairedResults;
         pairedResults.reserve(numPairs);
 
         for (size_t i = 0; i < numPairs; ++i) {
-            auto [randoms, antitheticRandoms] = simulator.getRng().generateAntitheticPair(stepCount_);
+            auto [randoms, antitheticRandoms] =
+                simulator.getRng().generateAntitheticPair(stepCount_);
 
             double terminal1 = simulator.generateTerminalWithRandoms(randoms);
             double payoff1 = payoff_(terminal1);
@@ -140,8 +141,8 @@ private:
             pairedResults.push_back((payoff1 + payoff2) / 2.0);
         }
 
-        double mean = std::accumulate(pairedResults.begin(), pairedResults.end(), 0.0) / 
-                     static_cast<double>(numPairs);
+        double mean = std::accumulate(pairedResults.begin(), pairedResults.end(), 0.0) /
+                      static_cast<double>(numPairs);
 
         double variance = 0.0;
         for (const auto& r : pairedResults)
