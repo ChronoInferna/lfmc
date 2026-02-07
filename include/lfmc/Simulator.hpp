@@ -51,6 +51,18 @@ template <StochasticProcess P, NumericalScheme<P> S, Payoff PO> class Simulator 
         return x;
     }
 
+    double generateTerminalWithRandoms(const std::vector<double>& randomNormals) {
+        double dt = timeToMaturity_ / static_cast<float>(stepCount_);
+        double x = initialValue_;
+        
+        for (size_t i{}; i < stepCount_; ++i) {
+            x = scheme_.step(process_, x, dt, randomNormals[i]);
+        }
+        return x;
+    }
+
+    RandomGenerator& getRng() { return rng_; }
+
     // TODO change return type?
     // void setStrategy() noexcept {
     // Restart thread?
