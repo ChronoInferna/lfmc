@@ -27,33 +27,20 @@ class VarianceReductionBaseDecorator : public SimulatorInterface {
     explicit VarianceReductionBaseDecorator(std::unique_ptr<SimulatorInterface> simulator)
         : simulator_(std::move(simulator)) {}
 
-    // Override methods to apply variance reduction techniques
-    // std::vector<double> generatePath() override {
-    //     return this->simulator_->generatePath();
-    // }
-
-    double generateTerminal() override {
-        return simulator_->generateTerminal();
+    double sample() override {
+        // By default, just call the underlying simulator's sample method
+        return simulator_->sample();
     }
 
-    double generatePayoff() override {
-        return simulator_->generatePayoff();
+    // TODO temporary now, see note in Simulator.hpp
+    double sampleFromRandoms(const std::vector<double>& Z) override {
+        return simulator_->sampleFromRandoms(Z);
     }
-
-    double generateTerminalFromRandoms(const std::vector<double>& r) override {
-        return simulator_->generateTerminalFromRandoms(r);
+    size_t steps() const noexcept override {
+        return simulator_->steps();
     }
-
-    double generatePayoffFromRandoms(const std::vector<double>& r) override {
-        return simulator_->generatePayoffFromRandoms(r);
-    }
-
-    RandomGenerator& getRng() override {
-        return simulator_->getRng();
-    }
-
-    size_t getStepCount() const noexcept override {
-        return simulator_->getStepCount();
+    RandomGenerator& rng() override {
+        return simulator_->rng();
     }
 };
 
@@ -64,21 +51,15 @@ class AntitheticVariates : public VarianceReductionBaseDecorator {
     AntitheticVariates(std::unique_ptr<SimulatorInterface> simulator)
         : Base(std::move(simulator)) {}
 
-    // Doesn't make sense here unless we want to return both paths
-    // std::vector<double> generatePath() override {
-    //     // Implement antithetic variates logic here
-    //     return Base::generatePath();
-    // }
-
-    double generatePayoff() override {
-        size_t steps = simulator_->getStepCount();
-        auto randoms = simulator_->getRng().generateNormals(steps);
+    double sample() override {
+        size_t steps = simulator_->steps();
+        auto randoms = simulator_->rng().generateNormals(steps);
         std::vector<double> antitheticRandoms(steps);
         std::transform(randoms.begin(), randoms.end(), antitheticRandoms.begin(),
                        [](double r) { return -r; }); // Create antithetic randoms
 
-        double payoff1 = simulator_->generatePayoffFromRandoms(randoms);
-        double payoff2 = simulator_->generatePayoffFromRandoms(antitheticRandoms);
+        double payoff1 = simulator_->sampleFromRandoms(randoms);
+        double payoff2 = simulator_->sampleFromRandoms(antitheticRandoms);
 
         return (payoff1 + payoff2) / 2.0;
     }
