@@ -46,7 +46,7 @@ template <StochasticProcess P, NumericalScheme<P> S, Payoff PO> class Manager {
 
         double totalResult = 0.0;
         for (auto& simulator : simulators_) {
-            totalResult += payoff_(simulator->generateTerminal());
+            totalResult += simulator->sample();
         }
 
         // TODO convert to std expected for division by zero safety and error handling
@@ -68,7 +68,7 @@ template <StochasticProcess P, NumericalScheme<P> S, Payoff PO> class Manager {
         std::vector<double> results;
         results.reserve(numSimulations);
         for (auto& simulator : simulators_) {
-            results.push_back(simulator->generatePayoff());
+            results.push_back(simulator->sample());
         }
 
         double mean = std::accumulate(results.begin(), results.end(), 0.0) /
@@ -98,7 +98,7 @@ template <StochasticProcess P, NumericalScheme<P> S, Payoff PO> class Manager {
         std::vector<double> results;
         results.reserve(numSimulations);
         for (auto& simulator : simulators_) {
-            results.push_back(payoff_(simulator->generateTerminal()));
+            results.push_back(simulator->sample());
         }
 
         double mean = std::accumulate(results.begin(), results.end(), 0.0) /

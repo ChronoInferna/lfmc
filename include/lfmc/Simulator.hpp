@@ -15,25 +15,16 @@
 namespace lfmc {
 
 // TODO break this up into multiple engines for various parts like path generation, aggregation,
-// etc. since otherwise this will cause a lot of blowup - i.e. every new variation technique
-// requires overriding every single method here
+// etc. see ChatGPT review
 class SimulatorInterface {
   public:
     virtual ~SimulatorInterface() = default;
+    virtual double sample() = 0;
 
-    // This is ideally the only thing that the manager should call, and the rest of the methods need
-    // to be moved and are for variance reduction techniques to use when they override this method
-    // virtual double sample() = 0;
-
-    virtual double generateTerminal() = 0;
-    virtual double generatePayoff() = 0;
-    virtual double generateTerminalFromRandoms(const std::vector<double>& randomNormals) = 0;
-    virtual double generatePayoffFromRandoms(const std::vector<double>& randomNormals) = 0;
-    // Unneeded as of now (since we only need the terminals for the estimator), but may be useful
-    // later for some variance reduction techniques virtual std::vector<double> generatePath() = 0;
-
-    virtual RandomGenerator& getRng() = 0;
-    virtual size_t getStepCount() const noexcept = 0;
+    // TODO temp as of right now, see above TODO
+    virtual double sampleFromRandoms(const std::vector<double>& Z) = 0;
+    virtual size_t steps() const noexcept = 0;
+    virtual RandomGenerator& rng() = 0;
 };
 
 template <StochasticProcess P, NumericalScheme<P> S, Payoff PO>
@@ -54,6 +45,30 @@ class Simulator : public SimulatorInterface {
           initialValue_(initialValue), timeToMaturity_(timeToMaturity), stepCount_(stepCount),
           rng_(std::make_unique<RandomGenerator>()) {}
 
+    double sample() override {
+        auto Z = rng_->generateNormals(stepCount_);
+        return sampleFromRandoms(Z);
+    }
+
+    double sampleFromRandoms(const std::vector<double>& Z) {
+        double dt = timeToMaturity_ / static_cast<float>(stepCount_);
+        double x = initialValue_;
+
+        for (size_t i{}; i < stepCount_; ++i) {
+            x = scheme_.step(process_, x, dt, Z[i]);
+        }
+
+        return payoff_(x);
+    }
+
+    size_t steps() const noexcept {
+        return stepCount_;
+    }
+
+    RandomGenerator& rng() {
+        return *rng_;
+    }
+
     // std::vector<double> generatePath() {
     //     double dt = timeToMaturity_ / static_cast<float>(stepCount_);
     //     std::vector<double> path;
@@ -68,45 +83,45 @@ class Simulator : public SimulatorInterface {
     //     }
     //     return path;
     // }
-
-    double generateTerminal() override {
-        double dt = timeToMaturity_ / static_cast<float>(stepCount_);
-        std::vector<double> randomNormals = rng_->generateNormals(stepCount_);
-
-        double x = initialValue_;
-        for (size_t i{}; i < stepCount_; ++i) {
-            x = scheme_.step(process_, x, dt, randomNormals[i]);
-        }
-        return x;
-    }
-
-    double generatePayoff() override {
-        double terminal = this->generateTerminal();
-        return payoff_(terminal);
-    }
-
-    double generateTerminalFromRandoms(const std::vector<double>& randomNormals) override {
-        double dt = timeToMaturity_ / static_cast<float>(stepCount_);
-        double x = initialValue_;
-
-        for (size_t i{}; i < stepCount_; ++i) {
-            x = scheme_.step(process_, x, dt, randomNormals[i]);
-        }
-        return x;
-    }
-
-    double generatePayoffFromRandoms(const std::vector<double>& randomNormals) override {
-        double terminal = this->generateTerminalFromRandoms(randomNormals);
-        return payoff_(terminal);
-    }
-
-    RandomGenerator& getRng() override {
-        return *rng_;
-    }
-
-    size_t getStepCount() const noexcept override {
-        return stepCount_;
-    }
+    //
+    // double generateTerminal() override {
+    //     double dt = timeToMaturity_ / static_cast<float>(stepCount_);
+    //     std::vector<double> randomNormals = rng_->generateNormals(stepCount_);
+    //
+    //     double x = initialValue_;
+    //     for (size_t i{}; i < stepCount_; ++i) {
+    //         x = scheme_.step(process_, x, dt, randomNormals[i]);
+    //     }
+    //     return x;
+    // }
+    //
+    // double generatePayoff() override {
+    //     double terminal = this->generateTerminal();
+    //     return payoff_(terminal);
+    // }
+    //
+    // double generateTerminalFromRandoms(const std::vector<double>& randomNormals) override {
+    //     double dt = timeToMaturity_ / static_cast<float>(stepCount_);
+    //     double x = initialValue_;
+    //
+    //     for (size_t i{}; i < stepCount_; ++i) {
+    //         x = scheme_.step(process_, x, dt, randomNormals[i]);
+    //     }
+    //     return x;
+    // }
+    //
+    // double generatePayoffFromRandoms(const std::vector<double>& randomNormals) override {
+    //     double terminal = this->generateTerminalFromRandoms(randomNormals);
+    //     return payoff_(terminal);
+    // }
+    //
+    // RandomGenerator& getRng() override {
+    //     return *rng_;
+    // }
+    //
+    // size_t getStepCount() const noexcept override {
+    //     return stepCount_;
+    // }
 
     // TODO change return type?
     // Restart thread?
