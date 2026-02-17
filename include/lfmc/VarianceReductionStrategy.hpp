@@ -1,6 +1,8 @@
 #pragma once
 
-#include <concepts>
+#include "lfmc/Simulator.hpp"
+
+#include <memory>
 
 // TODO: Implement derived classes for specific variance reduction techniques.
 // Examples include Antithetic Variates, Control Variates, Importance Sampling, etc.
@@ -16,38 +18,69 @@
 
 namespace lfmc {
 
-class VarianceReductionStrategy {
+// Decorator for variance reduction strategies (e.g., Antithetic Variates, Control Variates, etc.)
+class VarianceReductionBaseDecorator : public SimulatorInterface {
+  protected:
+    std::unique_ptr<SimulatorInterface> simulator_; // Pointer to the base simulator
+
   public:
-    virtual ~VarianceReductionStrategy() = 0;
+    explicit VarianceReductionBaseDecorator(std::unique_ptr<SimulatorInterface> simulator)
+        : simulator_(std::move(simulator)) {}
 
-    virtual double apply(double data) noexcept = 0;
-};
+    // Override methods to apply variance reduction techniques
+    // std::vector<double> generatePath() override {
+    //     return this->simulator_->generatePath();
+    // }
 
-inline VarianceReductionStrategy::~VarianceReductionStrategy() = default;
+    double generateTerminal() override {
+        return simulator_->generateTerminal();
+    }
 
-template <typename T>
-concept VRStrategy = std::derived_from<T, VarianceReductionStrategy>;
+    double generatePayoff() override {
+        return simulator_->generatePayoff();
+    }
 
-class NoVarianceReduction : public VarianceReductionStrategy {
-  public:
-    NoVarianceReduction() noexcept = default;
-    ~NoVarianceReduction() noexcept override = default;
+    double generateTerminalFromRandoms(const std::vector<double>& r) override {
+        return simulator_->generateTerminalFromRandoms(r);
+    }
 
-    double apply(double data) noexcept override {
-        return data;
+    double generatePayoffFromRandoms(const std::vector<double>& r) override {
+        return simulator_->generatePayoffFromRandoms(r);
+    }
+
+    RandomGenerator& getRng() override {
+        return simulator_->getRng();
+    }
+
+    size_t getStepCount() const noexcept override {
+        return simulator_->getStepCount();
     }
 };
 
-class AntitheticVariates : public VarianceReductionStrategy {
+// Example implementation of Antithetic Variates strategy
+class AntitheticVariates : public VarianceReductionBaseDecorator {
   public:
-    AntitheticVariates() noexcept = default;
-    ~AntitheticVariates() noexcept override = default;
+    using Base = VarianceReductionBaseDecorator;
+    AntitheticVariates(std::unique_ptr<SimulatorInterface> simulator)
+        : Base(std::move(simulator)) {}
 
-    double apply(double data) noexcept override {
-        // Placeholder implementation - in practice, this would need to be integrated with the
-        // random number generation and path simulation to create antithetic pairs.
-        return data;
-        // Negate the data as a simple example of an antithetic transformation
+    // Doesn't make sense here unless we want to return both paths
+    // std::vector<double> generatePath() override {
+    //     // Implement antithetic variates logic here
+    //     return Base::generatePath();
+    // }
+
+    double generatePayoff() override {
+        size_t steps = simulator_->getStepCount();
+        auto randoms = simulator_->getRng().generateNormals(steps);
+        std::vector<double> antitheticRandoms(steps);
+        std::transform(randoms.begin(), randoms.end(), antitheticRandoms.begin(),
+                       [](double r) { return -r; }); // Create antithetic randoms
+
+        double payoff1 = simulator_->generatePayoffFromRandoms(randoms);
+        double payoff2 = simulator_->generatePayoffFromRandoms(antitheticRandoms);
+
+        return (payoff1 + payoff2) / 2.0;
     }
 };
 
