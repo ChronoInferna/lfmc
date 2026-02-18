@@ -26,14 +26,13 @@ TEST_CASE("Full Monte Carlo tests ", "[Manager]") {
         lfmc::EulerMaruyama<lfmc::GeometricBrownianMotion> euler;
         lfmc::EuropeanCall call(K);
         lfmc::State state{S0, T, nSteps};
+        lfmc::ManagerConfig config{1000, 0};
 
         // Create manager
-        lfmc::Manager<lfmc::GeometricBrownianMotion,
-                      lfmc::EulerMaruyama<lfmc::GeometricBrownianMotion>, lfmc::EuropeanCall>
-            manager(gbm, euler, call, state);
+        lfmc::Manager<> manager(gbm, euler, call, state);
 
         // Run sims
-        auto [mcPrice, stdError] = manager.simulateWithError();
+        auto [mcPrice, stdError] = manager.simulateWithError(config);
 
         // Discount to present value
         double discountedPrice = mcPrice * std::exp(-r * T);
@@ -69,14 +68,13 @@ TEST_CASE("Full Monte Carlo tests ", "[Manager]") {
         lfmc::EulerMaruyama<lfmc::GeometricBrownianMotion> euler;
         lfmc::EuropeanCall call(K);
         lfmc::State state{S0, T, nSteps};
+        lfmc::ManagerConfig config{0, 1000};
 
         // Create manager with antithetic variates
-        lfmc::Manager<lfmc::GeometricBrownianMotion,
-                      lfmc::EulerMaruyama<lfmc::GeometricBrownianMotion>, lfmc::EuropeanCall>
-            manager(gbm, euler, call, state);
+        lfmc::Manager<> manager(gbm, euler, call, state);
 
         // Run sims with antithetic variates
-        auto [mcPrice, stdError] = manager.simulateWithAntithetic();
+        auto [mcPrice, stdError] = manager.simulateWithError(config);
 
         // Discount to present value
         double discountedPrice = mcPrice * std::exp(-r * T);
