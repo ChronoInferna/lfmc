@@ -32,10 +32,11 @@ namespace lfmc {
  *     - z: Standard normal random variable N(0,1).
  *   The method returns the next state X_{t+dt}.
  */
-template <typename S, typename P>
-concept NumericalScheme = requires(S const& s, P const& p, double x, double dt, double z) {
-    { s.step(p, x, dt, z) } -> std::same_as<double>;
-};
+template <class S, class P>
+concept NumericalScheme =
+    StochasticProcess<P> && requires(S const& s, P const& p, double x, double dt, double z) {
+        { s.step(p, x, dt, z) } -> std::same_as<double>;
+    };
 
 template <StochasticProcess P> struct EulerMaruyama {
     /**
@@ -61,25 +62,25 @@ template <StochasticProcess P> struct EulerMaruyama {
  *
  * This is faster and more accurate than Euler-Maruyama for GBM.
  */
-class GBMExact {
-  public:
-    explicit GBMExact(GeometricBrownianMotion gbm) : gbm_(gbm) {}
-
-    /**
-     * @brief Simulate terminal value using exact solution.
-     * @param x0 Initial value.
-     * @param T Time to maturity.
-     * @param z Standard normal random variable.
-     * @return Terminal value X_T.
-     */
-    double simulate_terminal(double x0, double T, double z) const noexcept {
-        double drift_adjusted = (gbm_.mu - 0.5 * gbm_.sigma * gbm_.sigma) * T;
-        double diffusion_term = gbm_.sigma * std::sqrt(T) * z;
-        return x0 * std::exp(drift_adjusted + diffusion_term);
-    }
-
-  private:
-    GeometricBrownianMotion gbm_;
-};
+// class GBMExact {
+//   public:
+//     explicit GBMExact(GeometricBrownianMotion gbm) : gbm_(gbm) {}
+//
+//     /**
+//      * @brief Simulate terminal value using exact solution.
+//      * @param x0 Initial value.
+//      * @param T Time to maturity.
+//      * @param z Standard normal random variable.
+//      * @return Terminal value X_T.
+//      */
+//     double simulate_terminal(double x0, double T, double z) const noexcept {
+//         double drift_adjusted = (gbm_.mu - 0.5 * gbm_.sigma * gbm_.sigma) * T;
+//         double diffusion_term = gbm_.sigma * std::sqrt(T) * z;
+//         return x0 * std::exp(drift_adjusted + diffusion_term);
+//     }
+//
+//   private:
+//     GeometricBrownianMotion gbm_;
+// };
 
 } // namespace lfmc
