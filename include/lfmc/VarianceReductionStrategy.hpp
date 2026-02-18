@@ -1,7 +1,9 @@
 #pragma once
 
-#include "lfmc/Simulator.hpp"
+#include "Estimator.hpp"
+#include "types.hpp"
 
+#include <functional>
 #include <memory>
 
 // TODO: Implement derived classes for specific variance reduction techniques.
@@ -19,28 +21,29 @@
 namespace lfmc {
 
 // Decorator for variance reduction strategies (e.g., Antithetic Variates, Control Variates, etc.)
-class VarianceReductionBaseDecorator : public SimulatorInterface {
+class VarianceReductionBaseDecorator : public EstimatorInterface {
   protected:
-    std::unique_ptr<SimulatorInterface> simulator_; // Pointer to the base simulator
+    std::unique_ptr<EstimatorInterface> estimator_; // Pointer to the base estimator
 
   public:
-    explicit VarianceReductionBaseDecorator(std::unique_ptr<SimulatorInterface> simulator)
-        : simulator_(std::move(simulator)) {}
+    explicit VarianceReductionBaseDecorator(std::unique_ptr<EstimatorInterface> estimator)
+        : estimator_(std::move(estimator)) {}
 
-    double sample() override {
-        // By default, just call the underlying simulator's sample method
-        return simulator_->sample();
+    std::vector<Path> sample() override {
+        // By default, just call the underlying estimator's sample method
+        return estimator_->sample();
     }
 
-    // TODO temporary now, see note in Simulator.hpp
-    double sampleFromRandoms(const std::vector<double>& Z) override {
-        return simulator_->sampleFromRandoms(Z);
+    State const& getState() const override {
+        return estimator_->getState();
     }
-    size_t steps() const noexcept override {
-        return simulator_->steps();
+
+    Normals generateNormals(size_t n) override {
+        return estimator_->generateNormals(n);
     }
-    RandomGenerator& rng() override {
-        return simulator_->rng();
+
+    Path generatePath(std::span<const double> randomNormals) override {
+        return estimator_->generatePath(randomNormals);
     }
 };
 
@@ -48,20 +51,20 @@ class VarianceReductionBaseDecorator : public SimulatorInterface {
 class AntitheticVariates : public VarianceReductionBaseDecorator {
   public:
     using Base = VarianceReductionBaseDecorator;
-    AntitheticVariates(std::unique_ptr<SimulatorInterface> simulator)
-        : Base(std::move(simulator)) {}
+    AntitheticVariates(std::unique_ptr<EstimatorInterface> estimator)
+        : Base(std::move(estimator)) {}
 
-    double sample() override {
-        size_t steps = simulator_->steps();
-        auto randoms = simulator_->rng().generateNormals(steps);
-        std::vector<double> antitheticRandoms(steps);
-        std::transform(randoms.begin(), randoms.end(), antitheticRandoms.begin(),
-                       [](double r) { return -r; }); // Create antithetic randoms
+    std::vector<Path> sample() override {
+        const State& state = estimator_->getState();
 
-        double payoff1 = simulator_->sampleFromRandoms(randoms);
-        double payoff2 = simulator_->sampleFromRandoms(antitheticRandoms);
+        Normals normals = estimator_->generateNormals(state.steps);
+        Normals antitheticNormals(normals);
+        std::transform(normals.begin(), normals.end(), antitheticNormals.begin(), std::negate());
 
-        return (payoff1 + payoff2) / 2.0;
+        Path path = estimator_->generatePath(normals);
+        Path antitheticPath = estimator_->generatePath(antitheticNormals);
+
+        return {path, antitheticPath};
     }
 };
 
