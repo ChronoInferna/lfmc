@@ -13,4 +13,10 @@ struct State {
 using Path = std::vector<double>;
 using Normals = std::vector<double>;
 
+struct ManagerConfig {
+    // TODO temp
+    size_t numNoVarianceReductionSimulations;
+    size_t numAntitheticVariatesSimulations;
+};
+
 } // namespace lfmc

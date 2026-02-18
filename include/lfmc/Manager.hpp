@@ -19,7 +19,8 @@
 
 namespace lfmc {
 
-template <StochasticProcess P, NumericalScheme<P> S, Payoff PO, RandomGenerator RNG = PseudoRandom>
+template <StochasticProcess P = GeometricBrownianMotion, NumericalScheme<P> S = EulerMaruyama<P>,
+          RandomGenerator RNG = PseudoRandom, Payoff PO = EuropeanCall>
 class Manager {
   private:
     P process_;
@@ -31,24 +32,26 @@ class Manager {
     std::vector<std::unique_ptr<EstimatorInterface>> simulators_;
 
   public:
-    explicit Manager(P process, S scheme, PO payoff, RNG randomGenerator, State state) noexcept
+    explicit Manager(P process, S scheme, PO payoff, State state, RNG randomGenerator) noexcept
         : process_(std::move(process)), scheme_(std::move(scheme)), payoff_(std::move(payoff)),
-          randomGenerator_(std::move(randomGenerator)), state_(state) {}
+          state_(state), randomGenerator_(std::move(randomGenerator)) {}
     explicit Manager(P process, S scheme, PO payoff, State state) noexcept
         : process_(std::move(process)), scheme_(std::move(scheme)), payoff_(std::move(payoff)),
-          randomGenerator_(), state_(state) {}
+          state_(state), randomGenerator_() {}
 
-    // TODO better way to do this without passing in all the same parameters to each
-    // simulator?
-    // Maybe a factory pattern or something? Or maybe pass in a config struct?
-    double simulate(size_t numSimulations = 1000) {
-        simulators_.clear();
-        simulators_.reserve(numSimulations);
+    // TODO better configuration for number of simulations
+    double simulate(const ManagerConfig& config) {
+        size_t numSimulations =
+            config.numNoVarianceReductionSimulations + config.numAntitheticVariatesSimulations;
 
         // Create simulators
-        for (size_t i{}; i < numSimulations; ++i) {
+        for (size_t i{}; i < config.numNoVarianceReductionSimulations; ++i) {
             simulators_.push_back(
-                std::make_unique<Estimator<P, S>>(process_, scheme_, payoff_, state_));
+                std::make_unique<Estimator<P, S, RNG>>(process_, scheme_, state_));
+        }
+        for (size_t i{}; i < config.numAntitheticVariatesSimulations; ++i) {
+            simulators_.push_back(std::make_unique<AntitheticVariates>(
+                std::make_unique<Estimator<P, S, RNG>>(process_, scheme_, state_)));
         }
 
         // Run simulations
@@ -74,58 +77,18 @@ class Manager {
         return mean;
     }
 
-    // TODO temporary simulate with antithetic variates for now, but will need to be redesigned to
-    // support more variance reduction techniques and passing changing a simulator's type
-    std::pair<double, double> simulateWithAntithetic(size_t numSimulations = 1000) {
-        simulators_.clear();
-        simulators_.reserve(numSimulations);
-
-        // Create simulators with antithetic variates
-        for (size_t i{}; i < numSimulations; ++i) {
-            simulators_.push_back(std::make_unique<AntitheticVariates>(
-                std::make_unique<Estimator<P, S>>(process_, scheme_, state_)));
-        }
-
-        // Run simulations
-        std::vector<Path> results;
-        results.reserve(numSimulations);
-        for (auto& simulator : simulators_) {
-            std::vector<Path> paths = simulator->sample();
-            for (const auto& path : paths) {
-                results.push_back(path);
-            }
-        }
-
-        // Payoffs
-        std::vector<double> payoffs;
-        payoffs.reserve(results.size());
-        for (const auto& path : results) {
-            payoffs.push_back(payoff_(path));
-        }
-
-        // Calculate mean and standard error
-        double mean = std::accumulate(payoffs.begin(), payoffs.end(), 0.0) /
-                      static_cast<double>(payoffs.size());
-
-        if (results.size() < 2)
-            return {mean, 0.0};
-
-        double variance = 0.0;
-        for (const auto& r : payoffs)
-            variance += (r - mean) * (r - mean);
-        variance /= static_cast<double>(results.size() - 1);
-        double stdError = std::sqrt(variance / static_cast<double>(results.size()));
-
-        return {mean, stdError};
-    }
-
-    std::pair<double, double> simulateWithError(size_t numSimulations = 1000) {
-        simulators_.clear();
-        simulators_.reserve(numSimulations);
+    std::pair<double, double> simulateWithError(const ManagerConfig& config) {
+        size_t numSimulations =
+            config.numNoVarianceReductionSimulations + config.numAntitheticVariatesSimulations;
 
         // Create simulators
-        for (size_t i{}; i < numSimulations; ++i) {
-            simulators_.push_back(std::make_unique<Estimator<P, S>>(process_, scheme_, state_));
+        for (size_t i{}; i < config.numNoVarianceReductionSimulations; ++i) {
+            simulators_.push_back(
+                std::make_unique<Estimator<P, S, RNG>>(process_, scheme_, state_));
+        }
+        for (size_t i{}; i < config.numAntitheticVariatesSimulations; ++i) {
+            simulators_.push_back(std::make_unique<AntitheticVariates>(
+                std::make_unique<Estimator<P, S, RNG>>(process_, scheme_, state_)));
         }
 
         // Run simulations

@@ -26,7 +26,8 @@ class EstimatorInterface {
     virtual Path generatePath(std::span<const double> randomNormals) = 0;
 };
 
-template <StochasticProcess P, NumericalScheme<P> S, RandomGenerator RNG = PseudoRandom>
+template <StochasticProcess P = GeometricBrownianMotion, NumericalScheme<P> S = EulerMaruyama<P>,
+          RandomGenerator RNG = PseudoRandom>
 class Estimator : public EstimatorInterface {
   private:
     P process_;
@@ -36,10 +37,10 @@ class Estimator : public EstimatorInterface {
     PathGenerator<P, S> pathGenerator_;
 
   public:
-    Estimator(P process, S scheme, RNG rng, State state)
+    explicit Estimator(P process, S scheme, State state, RNG randomGenerator)
         : process_(std::move(process)), scheme_(std::move(scheme)), state_(state),
-          randomGenerator_(std::move(rng)), pathGenerator_(process_, scheme_, state_) {}
-    Estimator(P process, S scheme, State state)
+          pathGenerator_(process_, scheme_, state_), randomGenerator_(std::move(randomGenerator)) {}
+    explicit Estimator(P process, S scheme, State state)
         : process_(std::move(process)), scheme_(std::move(scheme)), state_(state),
           randomGenerator_(), pathGenerator_(process_, scheme_, state_) {}
 
