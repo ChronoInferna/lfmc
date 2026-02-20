@@ -1,6 +1,7 @@
 # Source files for the lfmc library
 set(LFMC_SOURCES
     timing.cpp
+    RandomSource.hpp
 )
 
 # Create library

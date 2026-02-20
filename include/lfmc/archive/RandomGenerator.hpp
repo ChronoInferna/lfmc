@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"
+#include "lfmc/types.hpp"
 
 #include <random>
 
