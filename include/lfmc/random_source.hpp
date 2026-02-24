@@ -3,13 +3,14 @@
 #include "lfmc/types.hpp"
 
 #include <random>
+#include <vector>
 
 namespace lfmc {
 
 class RandomSource {
   public:
     virtual ~RandomSource() = default;
-    virtual Normals generate(size_t n) = 0;
+    virtual std::vector<Normals> generate_normals(size_t steps, size_t n = 1) = 0;
 };
 
 class PseudoRandomSource : public RandomSource {
@@ -20,7 +21,7 @@ class PseudoRandomSource : public RandomSource {
   public:
     PseudoRandomSource(unsigned seed = std::random_device{}());
 
-    Normals generate(size_t n) override;
+    std::vector<Normals> generate_normals(size_t steps, size_t) override;
 
     void seed(unsigned seed);
 };

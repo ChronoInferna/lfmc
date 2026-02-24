@@ -1,12 +1,11 @@
-#include "lfmc/StochasticProcess.hpp"
+#include "lfmc/stochastic_process.hpp"
 
 #include <cmath>
 
 namespace lfmc {
 
-class EulerMaruyama {
+template <StochasticProcess P = GeometricBrownianMotion> class EulerMaruyama {
   public:
-    template <StochasticProcess P>
     double step(P const& process, double t, double x, double dt, double z) const noexcept {
         double drift = process.drift(t, x);
         double diffusion = process.diffusion(t, x);

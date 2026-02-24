@@ -17,4 +17,18 @@ concept StochasticProcess = requires(P const& p, double t, double x) {
     { p.diffusion(t, x) } -> std::convertible_to<double>;
 };
 
+class GeometricBrownianMotion {
+  private:
+    double mu_;
+    double sigma_;
+    double x0_;
+
+  public:
+    GeometricBrownianMotion(double mu, double sigma, double x0);
+
+    double initial() const noexcept;
+    double drift(double, double x) const noexcept;
+    double diffusion(double, double x) const noexcept;
+};
+
 } // namespace lfmc
