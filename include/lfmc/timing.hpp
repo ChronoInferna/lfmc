@@ -25,9 +25,11 @@ namespace lfmc {
 class Timer {
     using clock = std::chrono::high_resolution_clock;
 
+  private:
+    clock::time_point start_time_;
+
   public:
-    /// Constructor
-    Timer() noexcept : start_time_(clock::now()) {}
+    Timer() noexcept;
 
     /// Resets the timer to the current time.
     void reset() noexcept;
@@ -36,9 +38,6 @@ class Timer {
      * @return Elapsed time in milliseconds.
      */
     long long elapsedMilliseconds() const noexcept;
-
-  private:
-    clock::time_point start_time_;
 };
 
 /**
@@ -51,23 +50,23 @@ class Timer {
 class ScopedTimer {
     using clock = std::chrono::high_resolution_clock;
 
+  private:
+    long long* out_;
+    clock::time_point start_time_;
+
   public:
     /** @brief Constructs a ScopedTimer that outputs elapsed time to the provided variable.
      *
      * @param out Reference to a long long variable where the elapsed time in milliseconds will be
      * stored upon destruction.
      */
-    explicit ScopedTimer(long long& out) noexcept : out_(&out), start_time_(clock::now()) {}
+    explicit ScopedTimer(long long& out) noexcept;
     /** @brief Destructor calculates and stores the elapsed time in milliseconds.
      *
      * Upon destruction, the elapsed time since construction is calculated and stored
      * in the variable provided during construction.
      */
     ~ScopedTimer() noexcept;
-
-  private:
-    long long* out_;
-    clock::time_point start_time_;
 };
 
 } // namespace lfmc
