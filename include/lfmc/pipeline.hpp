@@ -26,20 +26,17 @@ template <StochasticProcess SP, NumericalScheme<SP> NS> class Pipeline {
 
     std::expected<double, std::string> run(size_t steps, double T) {
         while (!estimator_->converged()) {
-            // TODO make all the return types std::expected? IDK if it's a good idea for hot loops
-            // like this but it would make error handling easier and more consistent. For now just
-            // return
             auto normals = random_source_->generate_normals(steps);
-            if (normals.empty()) {
+            if (!normals) {
                 return std::unexpected("Failed to generate random normals");
             }
 
-            auto paths = path_generator_->generate_paths(normals, steps, T);
-            if (paths.empty()) {
+            auto paths = path_generator_->generate_paths(normals.value(), steps, T);
+            if (!paths) {
                 return std::unexpected("Failed to generate paths");
             }
 
-            auto payoffs = payoff_->generate_payoffs(paths);
+            auto payoffs = payoff_->generate_payoffs(paths.value());
             if (!payoffs) {
                 return std::unexpected("Failed to generate payoffs");
             }

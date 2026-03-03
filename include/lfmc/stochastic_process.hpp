@@ -13,8 +13,8 @@ namespace lfmc {
 template <typename P>
 concept StochasticProcess = requires(P const& p, double t, double x) {
     { p.initial() } -> std::convertible_to<double>;
-    { p.drift(t, x) } -> std::convertible_to<double>;
-    { p.diffusion(t, x) } -> std::convertible_to<double>;
+    { p.drift(x, t) } -> std::convertible_to<double>;
+    { p.diffusion(x, t) } -> std::convertible_to<double>;
 };
 
 class GeometricBrownianMotion {
@@ -27,8 +27,8 @@ class GeometricBrownianMotion {
     GeometricBrownianMotion(double mu, double sigma, double x0);
 
     double initial() const noexcept;
-    double drift(double, double x) const noexcept;
-    double diffusion(double, double x) const noexcept;
+    double drift(double x, double) const noexcept;
+    double diffusion(double x, double) const noexcept;
 
     double mu() const noexcept;
     double sigma() const noexcept;

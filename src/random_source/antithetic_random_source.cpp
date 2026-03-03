@@ -3,7 +3,8 @@
 namespace lfmc {
 AntitheticRandomSource::AntitheticRandomSource(unsigned seed) : rng_(seed), dist_(0.0, 1.0) {}
 
-std::vector<Normals> AntitheticRandomSource::generate_normals(size_t steps, size_t samples) {
+std::expected<std::vector<Normals>, std::string>
+AntitheticRandomSource::generate_normals(size_t steps, size_t samples) {
     std::vector<Normals> result(samples, Normals(steps));
     for (size_t i = 0; i < samples; ++i) {
         Normals normals(steps);

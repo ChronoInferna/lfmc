@@ -4,6 +4,10 @@
 #include "lfmc/stochastic_process.hpp"
 #include "lfmc/types.hpp"
 
+#include <expected>
+#include <string>
+#include <vector>
+
 namespace lfmc {
 
 template <StochasticProcess Process, typename Scheme>
@@ -17,9 +21,8 @@ class PathGenerator {
     PathGenerator(Process process, Scheme scheme)
         : process_(std::move(process)), scheme_(std::move(scheme)) {}
 
-    // TODO move to cpp file
-    std::vector<Path> generate_paths(const std::vector<Normals>& normals, size_t steps,
-                                     double T) const {
+    std::expected<std::vector<Path>, std::string>
+    generate_paths(const std::vector<Normals>& normals, size_t steps, double T) const {
         const double dt = T / static_cast<double>(steps);
 
         std::vector<Path> paths;
@@ -31,7 +34,7 @@ class PathGenerator {
             path.push_back(x);
 
             for (size_t i = 0; i < steps; ++i) {
-                x = scheme_.step(process_, t, x, dt, norm[i]);
+                x = scheme_.step(process_, x, t, dt, norm[i]);
                 path.push_back(x);
                 t += dt;
             }

@@ -10,14 +10,14 @@ namespace lfmc {
 template <typename S, typename P>
 concept NumericalScheme =
     requires(S const& s, P const& p, double t, double x, double dt, double z) {
-        { s.step(p, t, x, dt, z) } -> std::convertible_to<double>;
+        { s.step(p, x, t, dt, z) } -> std::convertible_to<double>;
     };
 
 template <StochasticProcess P> class EulerMaruyama {
   public:
-    double step(P const& process, double t, double x, double dt, double z) const noexcept {
-        double drift = process.drift(t, x);
-        double diffusion = process.diffusion(t, x);
+    double step(P const& process, double x, double t, double dt, double z) const noexcept {
+        double drift = process.drift(x, t);
+        double diffusion = process.diffusion(x, t);
         return x + drift * dt + diffusion * std::sqrt(dt) * z;
     }
 };
