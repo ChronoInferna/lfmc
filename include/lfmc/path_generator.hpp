@@ -35,6 +35,7 @@ class PathGenerator {
                 path.push_back(x);
                 t += dt;
             }
+            paths.push_back(std::move(path));
         }
 
         return paths;

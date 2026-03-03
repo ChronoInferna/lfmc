@@ -1,10 +1,13 @@
 # Source files for the lfmc library
 set(LFMC_SOURCES
-    euler_maruyama.cpp
     european_payoffs.cpp
     geometric_brownian_motion.cpp
     monte_carlo_estimator.cpp
+    control_variate_estimator.cpp
+    control_variate_payoffs.cpp
     pseudo_random_source.cpp
+    antithetic_random_source.cpp
+    timing.cpp
 )
 
 # Create library

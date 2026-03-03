@@ -17,4 +17,12 @@ double GeometricBrownianMotion::diffusion(double, double x) const noexcept {
     return sigma_ * x;
 }
 
+double GeometricBrownianMotion::mu() const noexcept {
+    return mu_;
+}
+
+double GeometricBrownianMotion::sigma() const noexcept {
+    return sigma_;
+}
+
 } // namespace lfmc
