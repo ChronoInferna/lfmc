@@ -1,5 +1,3 @@
-#pragma once
-
 #include "lfmc/payoff.hpp"
 #include "lfmc/types.hpp"
 

@@ -1,13 +1,16 @@
 # Source files for the lfmc library
 set(LFMC_SOURCES
-    european_payoffs.cpp
-    geometric_brownian_motion.cpp
-    monte_carlo_estimator.cpp
-    control_variate_estimator.cpp
-    control_variate_payoffs.cpp
-    pseudo_random_source.cpp
-    antithetic_random_source.cpp
-    timing.cpp
+    estimator/monte_carlo_estimator.cpp
+    estimator/control_variate_estimator.cpp
+    payoff/asian_payoffs.cpp
+    payoff/barrier_payoffs.cpp
+    payoff/control_variate_payoffs.cpp
+    payoff/european_payoffs.cpp
+    payoff/lookback_payoffs.cpp
+    random_source/pseudo_random_source.cpp
+    random_source/antithetic_random_source.cpp
+    stochastic_process/geometric_brownian_motion.cpp
+    timing/timing.cpp
 )
 
 # Create library

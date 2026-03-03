@@ -32,7 +32,7 @@ ControlVariatePayoff::generate_payoffs(const std::vector<Path>& paths) const {
         result.push_back(std::move(combined_row));
     }
 
-    return std::vector<Payoffs>{result};
+    return result;
 }
 
 } // namespace lfmc

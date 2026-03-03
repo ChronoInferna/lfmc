@@ -1,11 +1,8 @@
-#pragma once
-
 #include "lfmc/payoff.hpp"
 #include "lfmc/types.hpp"
 
 #include <algorithm>
 #include <expected>
-#include <numeric>
 #include <string>
 #include <vector>
 

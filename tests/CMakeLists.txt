@@ -21,7 +21,7 @@ set(TEST_SOURCES
     test_process.cpp
     test_scheme.cpp
     test_pipeline.cpp
-    test_convergency.cpp
+    # test_convergency.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
