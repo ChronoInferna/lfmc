@@ -6,10 +6,6 @@ using namespace lfmc;
 
 // TODO add more test cases, e.g. for convergence criteria, error handling, etc. and dummy types
 
-/* ===========================
-   Test Cases
-   =========================== */
-
 TEST_CASE("Pipeline runs until estimator converges") {
     GeometricBrownianMotion gbm(0.05, 0.2, 100.0);
     EulerMaruyama<GeometricBrownianMotion> euler;
