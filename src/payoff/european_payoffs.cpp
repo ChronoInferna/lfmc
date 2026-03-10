@@ -1,4 +1,4 @@
-#include "lfmc/payoff.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
 
 #include <cmath>
 #include <expected>

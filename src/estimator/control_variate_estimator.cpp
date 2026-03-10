@@ -1,4 +1,4 @@
-#include "lfmc/estimator.hpp"
+#include "lfmc/estimator/control_variate_estimator.hpp"
 
 namespace lfmc {
 

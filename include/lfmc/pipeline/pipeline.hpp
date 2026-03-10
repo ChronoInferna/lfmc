@@ -1,9 +1,9 @@
 #pragma once
 
-#include "lfmc/estimator.hpp"
-#include "lfmc/path_generator.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/random_source.hpp"
+#include "lfmc/estimator/estimator.hpp"
+#include "lfmc/path_generator/path_generator.hpp"
+#include "lfmc/payoff/payoff.hpp"
+#include "lfmc/random_source/random_source.hpp"
 
 #include <expected>
 #include <memory>

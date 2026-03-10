@@ -1,7 +1,5 @@
 #pragma once
 
-#include "lfmc/stochastic_process.hpp"
-
 #include <cmath>
 #include <concepts>
 
@@ -12,15 +10,6 @@ concept NumericalScheme =
     requires(S const& s, P const& p, double t, double x, double dt, double z) {
         { s.step(p, x, t, dt, z) } -> std::convertible_to<double>;
     };
-
-template <StochasticProcess P> class EulerMaruyama {
-  public:
-    double step(P const& process, double x, double t, double dt, double z) const noexcept {
-        double drift = process.drift(x, t);
-        double diffusion = process.diffusion(x, t);
-        return x + drift * dt + diffusion * std::sqrt(dt) * z;
-    }
-};
 
 /**
  * @brief Exact simulation for Geometric Brownian Motion.

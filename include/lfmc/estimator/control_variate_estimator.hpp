@@ -1,33 +1,13 @@
 #pragma once
 
-#include "lfmc/types.hpp"
+#include "lfmc/core/types.hpp"
+#include "lfmc/estimator/estimator.hpp"
 
 #include <expected>
 #include <string>
 #include <vector>
 
 namespace lfmc {
-
-class Estimator {
-  public:
-    virtual std::expected<void, std::string> add_payoffs(const std::vector<Payoffs>& payoffs) = 0;
-    virtual bool converged() const = 0;
-    virtual std::expected<double, std::string> result() const = 0;
-    // virtual void merge(Estimator const& other) = 0;
-    virtual ~Estimator() = default;
-};
-
-class MonteCarloEstimator : public Estimator {
-  private:
-    double sum = 0.0;
-    std::size_t count = 0;
-
-  public:
-    std::expected<void, std::string> add_payoffs(const std::vector<Payoffs>& payoffs) override;
-    bool converged() const override;
-    std::expected<double, std::string> result() const override;
-    // void merge(Estimator const& other) override;
-};
 
 // TODO if control is analytically known, can put it at payoff level
 class ControlVariateEstimator : public Estimator {

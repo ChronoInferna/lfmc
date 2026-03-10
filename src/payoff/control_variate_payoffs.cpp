@@ -1,4 +1,4 @@
-#include "lfmc/payoff.hpp"
+#include "lfmc/payoff/control_variate_payoffs.hpp"
 
 #include <expected>
 #include <vector>

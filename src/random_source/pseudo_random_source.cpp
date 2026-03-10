@@ -1,5 +1,4 @@
-#include "lfmc/random_source.hpp"
-#include "lfmc/types.hpp"
+#include "lfmc/random_source/pseudo_random_source.hpp"
 
 #include <expected>
 

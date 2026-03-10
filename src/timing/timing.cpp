@@ -1,4 +1,4 @@
-#include "lfmc/timing.hpp"
+#include "lfmc/timing/timing.hpp"
 
 #include <chrono>
 

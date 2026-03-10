@@ -1,4 +1,4 @@
-#include "lfmc/random_source.hpp"
+#include "lfmc/random_source/antithetic_random_source.hpp"
 
 namespace lfmc {
 AntitheticRandomSource::AntitheticRandomSource(unsigned seed) : rng_(seed), dist_(0.0, 1.0) {}

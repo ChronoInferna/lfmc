@@ -1,8 +1,8 @@
 #pragma once
 
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/types.hpp"
+#include "lfmc/core/types.hpp"
+#include "lfmc/numerical_scheme/numerical_scheme.hpp"
+#include "lfmc/stochastic_process/stochastic_process.hpp"
 
 #include <expected>
 #include <string>

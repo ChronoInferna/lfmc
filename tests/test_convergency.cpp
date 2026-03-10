@@ -1,8 +1,13 @@
-#include "lfmc/payoffs/asian_payoffs.hpp"
-#include "lfmc/payoffs/barrier_payoffs.hpp"
-#include "lfmc/payoffs/lookback_payoffs.hpp"
-#include "lfmc/pipeline.hpp"
-#include "lfmc/timing.hpp"
+#include "lfmc/estimator/monte_carlo_estimator.hpp"
+#include "lfmc/numerical_scheme/euler_maruyama.hpp"
+#include "lfmc/payoff/asian_payoffs.hpp"
+#include "lfmc/payoff/barrier_payoffs.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/payoff/lookback_payoffs.hpp"
+#include "lfmc/pipeline/pipeline.hpp"
+#include "lfmc/random_source/pseudo_random_source.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
+#include "lfmc/timing/timing.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -95,7 +100,7 @@ run_convergence(const std::string& label, PayoffFactory make_payoff, double grou
             PathGenerator<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>>>(gbm,
                                                                                             euler);
         auto po = make_payoff();
-        auto est = std::make_unique<MonteCarloEstimator>(n); // see note below
+        auto est = std::make_unique<MonteCarloEstimator>(); // see note below
 
         Pipeline<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>> pipeline(
             std::move(rs), std::move(pg), std::move(po), std::move(est));
