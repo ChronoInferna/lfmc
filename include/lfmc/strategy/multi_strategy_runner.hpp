@@ -10,20 +10,18 @@
 
 namespace lfmc {
 
-template <StochasticProcess SP, NumericalScheme<SP> NS>
-class MultiStrategyRunner {
-private:
+template <StochasticProcess SP, NumericalScheme<SP> NS> class MultiStrategyRunner {
+  private:
     std::vector<std::unique_ptr<StrategyRunner<SP, NS>>> strategies;
     std::vector<std::thread> threads;
 
-public:
+  public:
     void add_strategy(std::unique_ptr<StrategyRunner<SP, NS>> strategy) {
         strategies.push_back(std::move(strategy));
     }
 
     // Run all strategies for a warmup period
-    std::expected<void, std::string> run_warmup(size_t steps, double T, 
-                                                  size_t warmup_iterations) {
+    std::expected<void, std::string> run_warmup(size_t steps, double T, size_t warmup_iterations) {
         threads.clear();
         threads.reserve(strategies.size());
 
@@ -52,11 +50,11 @@ public:
     std::vector<StrategyMetrics> get_all_metrics() const {
         std::vector<StrategyMetrics> metrics;
         metrics.reserve(strategies.size());
-        
+
         for (const auto& strategy : strategies) {
             metrics.push_back(strategy->get_metrics());
         }
-        
+
         return metrics;
     }
 
@@ -69,8 +67,8 @@ public:
         return std::min_element(metrics.begin(), metrics.end()) - metrics.begin();
     }
 
-    size_t strategy_count() const noexcept { 
-        return strategies.size(); 
+    size_t strategy_count() const noexcept {
+        return strategies.size();
     }
 };
 

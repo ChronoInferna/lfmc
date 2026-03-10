@@ -1,8 +1,8 @@
 #include "lfmc/estimator/monte_carlo_estimator.hpp"
 
+#include <cmath>  // ← ADD THIS for std::sqrt
+#include <limits> // ← ADD THIS for std::numeric_limits
 #include <vector>
-#include <cmath>    // ← ADD THIS for std::sqrt
-#include <limits>   // ← ADD THIS for std::numeric_limits
 namespace lfmc {
 
 std::expected<void, std::string>
@@ -21,19 +21,20 @@ MonteCarloEstimator::add_payoffs(const std::vector<Payoffs>& payoffs) {
     return {};
 }
 
-
 double MonteCarloEstimator::mean() const noexcept {
     return count > 0 ? sum / static_cast<double>(count) : 0.0;
 }
 
 double MonteCarloEstimator::variance() const noexcept {
-    if (count < 2) return std::numeric_limits<double>::max();
+    if (count < 2)
+        return std::numeric_limits<double>::max();
     double m = mean();
-    return (sum_sq / static_cast<double>(count)) - (m * m);  // ← Add explicit cast
+    return (sum_sq / static_cast<double>(count)) - (m * m); // ← Add explicit cast
 }
 
 double MonteCarloEstimator::std_error() const noexcept {
-    if (count < 2) return std::numeric_limits<double>::max();
+    if (count < 2)
+        return std::numeric_limits<double>::max();
     return std::sqrt(variance() / static_cast<double>(count));
 }
 

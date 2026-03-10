@@ -68,42 +68,47 @@ std::expected<void, std::string> ControlVariateEstimator::merge(Estimator const&
 }
 
 double ControlVariateEstimator::mean() const noexcept {
-    if (count == 0) return 0.0;
-    
+    if (count == 0)
+        return 0.0;
+
     double n = static_cast<double>(count);
     double mean_x = sum_x / n;
     double mean_y = sum_y / n;
-    
+
     double cov_xy = (sum_xy / n) - mean_x * mean_y;
     double var_y = (sum_yy / n) - mean_y * mean_y;
-    
-    if (var_y == 0.0) return mean_x;
-    
+
+    if (var_y == 0.0)
+        return mean_x;
+
     double beta = cov_xy / var_y;
     return mean_x - beta * (mean_y - control_expectation_);
 }
 
 double ControlVariateEstimator::variance() const noexcept {
-    if (count < 2) return std::numeric_limits<double>::max();
-    
+    if (count < 2)
+        return std::numeric_limits<double>::max();
+
     double n = static_cast<double>(count);
     double mean_x = sum_x / n;
     double mean_y = sum_y / n;
-    
+
     double var_x = (sum_xx / n) - mean_x * mean_x;
     double var_y = (sum_yy / n) - mean_y * mean_y;
     double cov_xy = (sum_xy / n) - mean_x * mean_y;
-    
-    if (var_y == 0.0) return var_x;
-    
+
+    if (var_y == 0.0)
+        return var_x;
+
     double beta = cov_xy / var_y;
-    
+
     // Var(X - β(Y - E[Y])) = Var(X) + β²Var(Y) - 2βCov(X,Y)
     return var_x + beta * beta * var_y - 2.0 * beta * cov_xy;
 }
 
 double ControlVariateEstimator::std_error() const noexcept {
-    if (count < 2) return std::numeric_limits<double>::max();
+    if (count < 2)
+        return std::numeric_limits<double>::max();
     return std::sqrt(variance() / static_cast<double>(count));
 }
 

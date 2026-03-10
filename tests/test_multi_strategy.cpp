@@ -14,35 +14,30 @@ using namespace lfmc;
 TEST_CASE("Multi-strategy runner compares variance reduction techniques") {
     GeometricBrownianMotion gbm(0.05, 0.20, 100.0);
     EulerMaruyama<GeometricBrownianMotion> euler;
-    
+
     constexpr size_t steps = 252;
     constexpr double T = 1.0;
     constexpr size_t warmup_iterations = 100;
 
-    MultiStrategyRunner<GeometricBrownianMotion, 
-                        EulerMaruyama<GeometricBrownianMotion>> runner;
+    MultiStrategyRunner<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>> runner;
 
     // Add pseudo-random strategy
     runner.add_strategy(
-        StrategyFactory<GeometricBrownianMotion, 
-                       EulerMaruyama<GeometricBrownianMotion>>::
-            create_pseudo_random_strategy(
-                gbm, euler, std::make_unique<EuropeanCall>(100.0), 42u));
+        StrategyFactory<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>>::
+            create_pseudo_random_strategy(gbm, euler, std::make_unique<EuropeanCall>(100.0), 42u));
 
     // Add antithetic variates strategy
     runner.add_strategy(
-        StrategyFactory<GeometricBrownianMotion,
-                       EulerMaruyama<GeometricBrownianMotion>>::
-            create_antithetic_strategy(
-                gbm, euler, std::make_unique<EuropeanCall>(100.0), 42u));
+        StrategyFactory<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>>::
+            create_antithetic_strategy(gbm, euler, std::make_unique<EuropeanCall>(100.0), 42u));
 
     auto result = runner.run_warmup(steps, T, warmup_iterations);
-    
+
     REQUIRE(result.has_value());
     REQUIRE(runner.strategy_count() == 2);
 
     auto metrics = runner.get_all_metrics();
-    
+
     REQUIRE(metrics.size() == 2);
     REQUIRE(metrics[0].samples > 0);
     REQUIRE(metrics[1].samples > 0);
@@ -50,9 +45,9 @@ TEST_CASE("Multi-strategy runner compares variance reduction techniques") {
     REQUIRE(metrics[1].variance > 0.0);
 
     size_t best_idx = runner.best_strategy_index();
-    INFO("Best strategy: " << metrics[best_idx].name 
-         << " with variance: " << metrics[best_idx].variance);
-    
+    INFO("Best strategy: " << metrics[best_idx].name
+                           << " with variance: " << metrics[best_idx].variance);
+
     REQUIRE(best_idx < metrics.size());
 }
 

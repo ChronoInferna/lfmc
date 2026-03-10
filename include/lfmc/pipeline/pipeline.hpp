@@ -49,7 +49,7 @@ template <StochasticProcess SP, NumericalScheme<SP> NS> class Pipeline {
 
         return estimator_->result();
     }
-    
+
     const Estimator* get_estimator() const noexcept {
         return estimator_.get();
     }
@@ -57,7 +57,6 @@ template <StochasticProcess SP, NumericalScheme<SP> NS> class Pipeline {
     Estimator* get_estimator() noexcept {
         return estimator_.get();
     }
-
 };
 
 } // namespace lfmc

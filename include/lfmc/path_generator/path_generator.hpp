@@ -28,7 +28,7 @@ class PathGenerator {
         std::vector<Path> paths;
         for (const auto& norm : normals) {
             Path path;
-            path.reserve(steps + 1);  
+            path.reserve(steps + 1);
             double t = 0.0;
             double x = process_.initial();
             path.push_back(x);
