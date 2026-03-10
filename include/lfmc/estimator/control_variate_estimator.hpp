@@ -2,7 +2,8 @@
 
 #include "lfmc/core/types.hpp"
 #include "lfmc/estimator/estimator.hpp"
-
+#include <cmath>
+#include <limits>
 #include <expected>
 #include <string>
 #include <vector>
@@ -18,6 +19,7 @@ class ControlVariateEstimator : public Estimator {
     double sum_y = 0.0;  // Sum of control variate values
     double sum_xy = 0.0; // Sum of products of payoffs and control variate
     double sum_yy = 0.0; // Sum of squares of control variate values
+    double sum_xx = 0.0;
 
     double control_expectation_ = 0.0; // Expected value of control variate (known analytically)
 
@@ -29,6 +31,11 @@ class ControlVariateEstimator : public Estimator {
     bool converged() const override;
     std::expected<double, std::string> result() const override;
     std::expected<void, std::string> merge(Estimator const& other) override;
+
+    double mean() const noexcept;
+    double variance() const noexcept;
+    double std_error() const noexcept;
+    std::size_t sample_count() const noexcept;
 };
 
 } // namespace lfmc

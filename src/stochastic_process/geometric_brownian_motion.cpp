@@ -9,12 +9,13 @@ double GeometricBrownianMotion::initial() const noexcept {
     return x0_;
 }
 
-double GeometricBrownianMotion::drift(double, double x) const noexcept {
-    return mu_ * x;
+
+double GeometricBrownianMotion::drift(double x, double) const noexcept {
+    return mu_ * x;  // Use first parameter
 }
 
-double GeometricBrownianMotion::diffusion(double, double x) const noexcept {
-    return sigma_ * x;
+double GeometricBrownianMotion::diffusion(double x, double) const noexcept {
+    return sigma_ * x;  // Use first parameter
 }
 
 double GeometricBrownianMotion::mu() const noexcept {

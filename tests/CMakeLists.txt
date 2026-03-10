@@ -22,6 +22,7 @@ set(TEST_SOURCES
     test_scheme.cpp
     test_pipeline.cpp
     test_convergency.cpp
+    test_multi_strategy.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
