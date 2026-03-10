@@ -50,4 +50,19 @@ std::expected<double, std::string> ControlVariateEstimator::result() const {
     return mean_x - beta * (mean_y - control_expectation_);
 }
 
+std::expected<void, std::string> ControlVariateEstimator::merge(Estimator const& other) {
+    const auto* other_estimator = dynamic_cast<const ControlVariateEstimator*>(&other);
+    if (!other_estimator) {
+        return std::unexpected("Incompatible estimator type for merging");
+    }
+
+    count += other_estimator->count;
+    sum_x += other_estimator->sum_x;
+    sum_y += other_estimator->sum_y;
+    sum_xy += other_estimator->sum_xy;
+    sum_yy += other_estimator->sum_yy;
+
+    return {};
+}
+
 } // namespace lfmc

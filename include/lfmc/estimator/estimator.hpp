@@ -13,7 +13,7 @@ class Estimator {
     virtual std::expected<void, std::string> add_payoffs(const std::vector<Payoffs>& payoffs) = 0;
     virtual bool converged() const = 0;
     virtual std::expected<double, std::string> result() const = 0;
-    // virtual void merge(Estimator const& other) = 0;
+    virtual std::expected<void, std::string> merge(Estimator const& other) = 0;
     virtual ~Estimator() = default;
 };
 

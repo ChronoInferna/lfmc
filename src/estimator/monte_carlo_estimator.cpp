@@ -33,10 +33,16 @@ std::expected<double, std::string> MonteCarloEstimator::result() const {
     return {sum / static_cast<double>(count)};
 }
 
-// void MonteCarloEstimator::merge(Estimator const& other) {
-//     auto const& mcOther = dynamic_cast<MonteCarloEstimator const&>(other);
-//     sum += mcOther.sum;
-//     count += mcOther.count;
-// }
+std::expected<void, std::string> MonteCarloEstimator::merge(Estimator const& other) {
+    const auto* other_estimator = dynamic_cast<const MonteCarloEstimator*>(&other);
+    if (!other_estimator) {
+        return std::unexpected("Incompatible estimator type for merging.");
+    }
+
+    sum += other_estimator->sum;
+    count += other_estimator->count;
+
+    return {};
+}
 
 } // namespace lfmc

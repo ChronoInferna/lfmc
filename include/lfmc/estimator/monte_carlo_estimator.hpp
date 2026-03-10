@@ -18,7 +18,7 @@ class MonteCarloEstimator : public Estimator {
     std::expected<void, std::string> add_payoffs(const std::vector<Payoffs>& payoffs) override;
     bool converged() const override;
     std::expected<double, std::string> result() const override;
-    // void merge(Estimator const& other) override;
+    std::expected<void, std::string> merge(Estimator const& other) override;
 };
 
 } // namespace lfmc
