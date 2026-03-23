@@ -49,7 +49,8 @@ template <StochasticProcess SP, NumericalScheme<SP> NS> class Engine {
         return {};
     }
 
-    // TODO run main simulation loop
+    // TODO run main simulation loop - is warmup function above necessary or is that just what this
+    // is?
 
     // Get current metrics
     std::vector<StrategyMetrics> get_all_metrics() const {

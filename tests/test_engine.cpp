@@ -39,6 +39,7 @@ TEST_CASE("Engine compares variance reduction techniques", "[engine]") {
     }
     engine.add_strategy(std::move(antithetic_strategy_result.value()));
 
+    // Run warmup and check metrics
     auto result = engine.run_warmup(steps, T, warmup_iterations);
 
     REQUIRE(result.has_value());
@@ -59,6 +60,8 @@ TEST_CASE("Engine compares variance reduction techniques", "[engine]") {
     size_t idx = best_idx.value();
 
     REQUIRE(idx < metrics.size());
+
+    // TODO run main loop
 }
 
 TEST_CASE("Multi-strategy engine with control variates") {
