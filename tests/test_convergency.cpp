@@ -19,9 +19,7 @@
 using namespace lfmc;
 using Catch::Matchers::WithinAbs;
 
-// ----------------------------------------------------------------
 // Black-Scholes closed-form helpers for ground truth
-// ----------------------------------------------------------------
 namespace bs {
 
 static double norm_cdf(double x) {
@@ -64,10 +62,8 @@ double up_and_out_call(double S, double K, double H, double r, double sigma, dou
 
 } // namespace bs
 
-// ----------------------------------------------------------------
-// Convergence runner: runs pipeline at increasing sample counts
-// and prints a table of results vs ground truth
-// ----------------------------------------------------------------
+// Convergence runner: runs pipeline at increasing sample counts and prints a table of results vs
+// ground truth
 struct ConvergenceResult {
     std::size_t samples;
     double estimate;
@@ -124,9 +120,7 @@ run_convergence(const std::string& label, PayoffFactory make_payoff, double grou
     return results;
 }
 
-// ----------------------------------------------------------------
 // Shared parameters
-// ----------------------------------------------------------------
 static constexpr double S0 = 100.0;
 static constexpr double K = 100.0;
 static constexpr double B_UP = 120.0; // Up-and-out barrier
@@ -138,9 +132,7 @@ static constexpr int STEPS = 252;
 
 static const std::vector<std::size_t> TIERS = {1000, 5000, 10000, 50000, 100000, 500000};
 
-// ----------------------------------------------------------------
 // Tests
-// ----------------------------------------------------------------
 
 TEST_CASE("Asian Call convergence", "[exotic][convergence][asian]") {
     double truth = bs::geometric_asian_call(S0, K, MU, SIGMA, T, STEPS);
