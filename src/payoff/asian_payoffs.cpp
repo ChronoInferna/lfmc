@@ -9,58 +9,42 @@
 
 namespace lfmc {
 
-class AsianCall : public Payoff {
-  private:
-    double strike_;
+AsianCall::AsianCall(double strike) : strike_(strike) {}
 
-  public:
-    explicit AsianCall(double strike) : strike_(strike) {}
+std::expected<std::vector<Payoffs>, std::string>
+AsianCall::generate_payoffs(const std::vector<Path>& paths) const {
+    Payoffs payoffs;
+    payoffs.reserve(paths.size());
 
-    std::expected<std::vector<Payoffs>, std::string>
-    generate_payoffs(const std::vector<Path>& paths) const override {
-        Payoffs payoffs;
+    for (const auto& path : paths) {
+        if (path.empty())
+            return std::unexpected("Empty path encountered in AsianCall");
 
-        payoffs.reserve(paths.size());
-
-        for (const auto& path : paths) {
-
-            if (path.empty())
-                return std::unexpected("Empty path encountered in AsianCall");
-
-            double mean =
-                std::reduce(path.begin(), path.end(), 0.0) / static_cast<double>(path.size());
-            payoffs.push_back(std::max(mean - strike_, 0.0));
-        }
-
-        return std::vector<Payoffs>{payoffs};
+        double mean =
+            std::reduce(path.begin(), path.end(), 0.0) / static_cast<double>(path.size());
+        payoffs.push_back(std::max(mean - strike_, 0.0));
     }
-};
 
-class AsianPut : public Payoff {
-  private:
-    double strike_;
+    return std::vector<Payoffs>{payoffs};
+}
 
-  public:
-    explicit AsianPut(double strike) : strike_(strike) {}
+AsianPut::AsianPut(double strike) : strike_(strike) {}
 
-    std::expected<std::vector<Payoffs>, std::string>
-    generate_payoffs(const std::vector<Path>& paths) const override {
+std::expected<std::vector<Payoffs>, std::string>
+AsianPut::generate_payoffs(const std::vector<Path>& paths) const {
+    Payoffs payoffs;
+    payoffs.reserve(paths.size());
 
-        Payoffs payoffs;
+    for (const auto& path : paths) {
+        if (path.empty())
+            return std::unexpected("Empty path encountered in AsianPut");
 
-        payoffs.reserve(paths.size());
-
-        for (const auto& path : paths) {
-            if (path.empty())
-                return std::unexpected("Empty path encountered in AsianPut");
-
-            double mean =
-                std::reduce(path.begin(), path.end(), 0.0) / static_cast<double>(path.size());
-            payoffs.push_back(std::max(strike_ - mean, 0.0));
-        }
-
-        return std::vector<Payoffs>{payoffs};
+        double mean =
+            std::reduce(path.begin(), path.end(), 0.0) / static_cast<double>(path.size());
+        payoffs.push_back(std::max(strike_ - mean, 0.0));
     }
-};
+
+    return std::vector<Payoffs>{payoffs};
+}
 
 } // namespace lfmc

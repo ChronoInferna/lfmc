@@ -1,5 +1,6 @@
 # Source files for the lfmc library
 set(LFMC_SOURCES
+    adaptive/adaptive_estimator.cpp
     estimator/monte_carlo_estimator.cpp
     estimator/control_variate_estimator.cpp
     payoff/asian_payoffs.cpp

@@ -53,4 +53,62 @@ class ControlVariatePayoff : public Payoff {
     generate_payoffs(const std::vector<Path>& paths) const override;
 };
 
+class AsianCall : public Payoff {
+  private:
+    double strike_;
+
+  public:
+    explicit AsianCall(double strike);
+
+    std::expected<std::vector<Payoffs>, std::string>
+    generate_payoffs(const std::vector<Path>& paths) const override;
+};
+
+class AsianPut : public Payoff {
+  private:
+    double strike_;
+
+  public:
+    explicit AsianPut(double strike);
+
+    std::expected<std::vector<Payoffs>, std::string>
+    generate_payoffs(const std::vector<Path>& paths) const override;
+};
+
+class UpAndOutCall : public Payoff {
+  private:
+    double strike_;
+    double barrier_;
+
+  public:
+    UpAndOutCall(double strike, double barrier);
+
+    std::expected<std::vector<Payoffs>, std::string>
+    generate_payoffs(const std::vector<Path>& paths) const override;
+};
+
+class DownAndInPut : public Payoff {
+  private:
+    double strike_;
+    double barrier_;
+
+  public:
+    DownAndInPut(double strike, double barrier);
+
+    std::expected<std::vector<Payoffs>, std::string>
+    generate_payoffs(const std::vector<Path>& paths) const override;
+};
+
+class LookbackCall : public Payoff {
+  public:
+    std::expected<std::vector<Payoffs>, std::string>
+    generate_payoffs(const std::vector<Path>& paths) const override;
+};
+
+class LookbackPut : public Payoff {
+  public:
+    std::expected<std::vector<Payoffs>, std::string>
+    generate_payoffs(const std::vector<Path>& paths) const override;
+};
+
 } // namespace lfmc
