@@ -11,8 +11,8 @@ namespace lfmc {
 // unbiased sample variance.
 
 StrategyStats AdaptiveVarianceReduction::run_strategy_batch(const std::string& name,
-                                                             const SamplerFn& sampler,
-                                                             size_t n_samples, uint64_t seed) {
+                                                            const SamplerFn& sampler,
+                                                            size_t n_samples, uint64_t seed) {
     auto t0 = std::chrono::high_resolution_clock::now();
     auto samples = sampler(n_samples, seed);
     auto t1 = std::chrono::high_resolution_clock::now();
@@ -57,17 +57,17 @@ AdaptiveVarianceReduction::compute_precision_weights(const std::vector<StrategyS
 // ─── run ──────────────────────────────────────────────────────────────────────
 
 ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, SamplerFn>> strategies,
-                                           size_t total_samples, ASVRConfig config) {
+                                          size_t total_samples, ASVRConfig config) {
     const size_t K = strategies.size();
     assert(K >= 1);
 
     const size_t hw = std::max(size_t{1}, config.n_threads);
 
     // ── Budget split ─────────────────────────────────────────────────────────
-    const size_t n_explore_each = std::max(
-        config.min_exploration_per_strategy,
-        static_cast<size_t>(config.exploration_fraction * static_cast<double>(total_samples) /
-                            static_cast<double>(K)));
+    const size_t n_explore_each =
+        std::max(config.min_exploration_per_strategy,
+                 static_cast<size_t>(config.exploration_fraction *
+                                     static_cast<double>(total_samples) / static_cast<double>(K)));
     const size_t n_explore_total = K * n_explore_each;
     const size_t n_exploit =
         (n_explore_total < total_samples) ? total_samples - n_explore_total : 0;
@@ -77,10 +77,9 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
     // Thread count is capped at min(K, floor(alpha * hw)) so that exploration
     // does not consume more than its "10%" thread share; remaining HW threads
     // are left idle during this phase and fully used during exploitation.
-    const size_t explore_thread_cap =
-        std::max(size_t{1},
-                 std::min(K, static_cast<size_t>(config.exploration_fraction *
-                                                  static_cast<double>(hw))));
+    const size_t explore_thread_cap = std::max(
+        size_t{1},
+        std::min(K, static_cast<size_t>(config.exploration_fraction * static_cast<double>(hw))));
 
     std::vector<StrategyStats> exploration_stats(K);
 
@@ -91,9 +90,8 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
         threads.reserve(wave_end - wave_start);
         for (size_t k = wave_start; k < wave_end; ++k) {
             threads.emplace_back([&, k]() {
-                exploration_stats[k] = run_strategy_batch(strategies[k].first,
-                                                           strategies[k].second, n_explore_each,
-                                                           detail::make_seed(k, 0));
+                exploration_stats[k] = run_strategy_batch(strategies[k].first, strategies[k].second,
+                                                          n_explore_each, detail::make_seed(k, 0));
             });
         }
         // jthreads join on destruction at end of wave block
@@ -108,14 +106,12 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
     if (n_exploit > 0) {
         size_t assigned = 0;
         for (size_t k = 0; k < K; ++k) {
-            exploit_counts[k] =
-                static_cast<size_t>(weights[k] * static_cast<double>(n_exploit));
+            exploit_counts[k] = static_cast<size_t>(weights[k] * static_cast<double>(n_exploit));
             assigned += exploit_counts[k];
         }
         if (assigned < n_exploit) {
-            const size_t best_k =
-                static_cast<size_t>(std::max_element(weights.begin(), weights.end()) -
-                                    weights.begin());
+            const size_t best_k = static_cast<size_t>(
+                std::max_element(weights.begin(), weights.end()) - weights.begin());
             exploit_counts[best_k] += (n_exploit - assigned);
         }
     }
@@ -139,9 +135,9 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
             for (size_t i = wave_start; i < wave_end; ++i) {
                 const size_t k = active[i];
                 threads.emplace_back([&, k]() {
-                    exploit_stats[k] = run_strategy_batch(strategies[k].first,
-                                                           strategies[k].second, exploit_counts[k],
-                                                           detail::make_seed(k, 1));
+                    exploit_stats[k] =
+                        run_strategy_batch(strategies[k].first, strategies[k].second,
+                                           exploit_counts[k], detail::make_seed(k, 1));
                 });
             }
         }
@@ -206,8 +202,8 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
         var_exploit /= (w_sum * w_sum);
 
     const double total_variance = (n_exploit > 0) ? var_exploit
-                                                   : exploration_stats[0].sample_variance /
-                                                         static_cast<double>(n_explore_each);
+                                                  : exploration_stats[0].sample_variance /
+                                                        static_cast<double>(n_explore_each);
 
     // Plain MC baseline for comparison: sigma_0^2 / N using the first strategy
     // (conventionally plain MC; the caller must ensure strategies[0] is plain MC)

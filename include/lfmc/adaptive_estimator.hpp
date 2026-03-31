@@ -101,9 +101,8 @@ namespace detail {
 // Two calls with the same (k, p) give the same seed; different (k, p) pairs are
 // statistically independent because they hit different streams of splitmix64.
 inline uint64_t make_seed(size_t k, size_t phase) noexcept {
-    uint64_t x = (static_cast<uint64_t>(k) * 0x9e3779b97f4a7c15ULL)
-               ^ (static_cast<uint64_t>(phase) * 0x6c62272e07bb0142ULL)
-               ^ 0xdeadbeefcafe0000ULL;
+    uint64_t x = (static_cast<uint64_t>(k) * 0x9e3779b97f4a7c15ULL) ^
+                 (static_cast<uint64_t>(phase) * 0x6c62272e07bb0142ULL) ^ 0xdeadbeefcafe0000ULL;
     x ^= x >> 30;
     x *= 0xbf58476d1ce4e5b9ULL;
     x ^= x >> 27;
@@ -169,8 +168,8 @@ inline std::pair<double, double> mean_variance(const std::vector<double>& sample
 
 // Plain pseudo-random Monte Carlo — baseline strategy
 template <StochasticProcess SP, NumericalScheme<SP> NS>
-SamplerFn make_plain_mc_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
-                                 size_t steps, double T) {
+SamplerFn make_plain_mc_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff, size_t steps,
+                                double T) {
     return [process, scheme, payoff, steps, T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};
         std::vector<double> samples;
@@ -191,7 +190,7 @@ SamplerFn make_plain_mc_sampler(SP process, NS scheme, std::shared_ptr<Payoff> p
 // because the two paths are negatively correlated for monotone payoffs.
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_antithetic_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
-                                   size_t steps, double T) {
+                                  size_t steps, double T) {
     return [process, scheme, payoff, steps, T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};
         std::vector<double> samples;
@@ -223,8 +222,8 @@ SamplerFn make_antithetic_sampler(SP process, NS scheme, std::shared_ptr<Payoff>
 // Returns: X_i - beta_hat * (Y_i - E[Y]) for each i
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_control_variate_sampler(SP process, NS scheme, std::shared_ptr<Payoff> target,
-                                        std::shared_ptr<Payoff> control, double control_mean,
-                                        size_t steps, double T) {
+                                       std::shared_ptr<Payoff> control, double control_mean,
+                                       size_t steps, double T) {
     return [process, scheme, target, control, control_mean, steps,
             T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};
@@ -272,8 +271,8 @@ SamplerFn make_control_variate_sampler(SP process, NS scheme, std::shared_ptr<Pa
 // Each raw sample is the antithetic average; OLS beta is estimated from those averages.
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_antithetic_cv_sampler(SP process, NS scheme, std::shared_ptr<Payoff> target,
-                                      std::shared_ptr<Payoff> control, double control_mean,
-                                      size_t steps, double T) {
+                                     std::shared_ptr<Payoff> control, double control_mean,
+                                     size_t steps, double T) {
     return [process, scheme, target, control, control_mean, steps,
             T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};

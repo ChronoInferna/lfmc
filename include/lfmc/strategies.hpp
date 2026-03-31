@@ -50,7 +50,7 @@ inline double normal_icdf(double p) noexcept {
     }
     const double q = std::sqrt(-2.0 * std::log(1.0 - p));
     return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
+           ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
 }
 
 // ─── Halton radical inverse ───────────────────────────────────────────────────
@@ -100,7 +100,7 @@ namespace lfmc {
 // each stratum and converted to N(0,1) via normal_icdf.
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_stratified_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
-                                   size_t steps, double T) {
+                                  size_t steps, double T) {
     return [process, scheme, payoff, steps, T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};
         std::uniform_real_distribution<double> udist{0.0, 1.0};
@@ -139,8 +139,8 @@ SamplerFn make_stratified_sampler(SP process, NS scheme, std::shared_ptr<Payoff>
 // large dimension counts (steps > ~20). ASVR will automatically assign low
 // weight to this strategy for path-dependent options where all steps matter.
 template <StochasticProcess SP, NumericalScheme<SP> NS>
-SamplerFn make_halton_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
-                               size_t steps, double T) {
+SamplerFn make_halton_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff, size_t steps,
+                              double T) {
     return [process, scheme, payoff, steps, T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};
         std::uniform_real_distribution<double> udist{0.0, 1.0};
@@ -195,38 +195,38 @@ SamplerFn make_halton_sampler(SP process, NS scheme, std::shared_ptr<Payoff> pay
 //                      exp(-0.5*theta^2) shrinks too fast and variance increases
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_importance_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
-                                   size_t steps, double T, double theta) {
-    return [process, scheme, payoff, steps, T, theta](size_t n,
-                                                       uint64_t seed) -> std::vector<double> {
-        std::mt19937_64 rng{seed};
-        // Per-step shift: distribute the total theta equally across sqrt(steps) normal draws
-        const double delta = theta / std::sqrt(static_cast<double>(steps));
-        std::normal_distribution<double> ndist{delta, 1.0}; // tilted draw
+                                  size_t steps, double T, double theta) {
+    return
+        [process, scheme, payoff, steps, T, theta](size_t n, uint64_t seed) -> std::vector<double> {
+            std::mt19937_64 rng{seed};
+            // Per-step shift: distribute the total theta equally across sqrt(steps) normal draws
+            const double delta = theta / std::sqrt(static_cast<double>(steps));
+            std::normal_distribution<double> ndist{delta, 1.0}; // tilted draw
 
-        // Log-weight constant: 0.5 * delta^2 * steps = 0.5 * theta^2
-        const double lw_const = 0.5 * theta * theta;
+            // Log-weight constant: 0.5 * delta^2 * steps = 0.5 * theta^2
+            const double lw_const = 0.5 * theta * theta;
 
-        std::vector<double> samples;
-        samples.reserve(n);
+            std::vector<double> samples;
+            samples.reserve(n);
 
-        for (size_t i = 0; i < n; ++i) {
-            Normals normals(steps);
-            double z_sum = 0.0;
-            for (size_t j = 0; j < steps; ++j) {
-                normals[j] = ndist(rng);
-                z_sum += normals[j];
+            for (size_t i = 0; i < n; ++i) {
+                Normals normals(steps);
+                double z_sum = 0.0;
+                for (size_t j = 0; j < steps; ++j) {
+                    normals[j] = ndist(rng);
+                    z_sum += normals[j];
+                }
+                // Likelihood ratio dP/dQ = exp(-delta * sum(Z') + 0.5 * delta^2 * steps)
+                //                        = exp(-theta/sqrt(steps) * sum(Z') + 0.5 * theta^2)
+                const double weight = std::exp(-delta * z_sum + lw_const);
+
+                auto path = detail::generate_path(process, scheme, normals, steps, T);
+                auto result = payoff->generate_payoffs({path});
+                if (result && !result->empty() && !(*result)[0].empty())
+                    samples.push_back((*result)[0][0] * weight);
             }
-            // Likelihood ratio dP/dQ = exp(-delta * sum(Z') + 0.5 * delta^2 * steps)
-            //                        = exp(-theta/sqrt(steps) * sum(Z') + 0.5 * theta^2)
-            const double weight = std::exp(-delta * z_sum + lw_const);
-
-            auto path = detail::generate_path(process, scheme, normals, steps, T);
-            auto result = payoff->generate_payoffs({path});
-            if (result && !result->empty() && !(*result)[0].empty())
-                samples.push_back((*result)[0][0] * weight);
-        }
-        return samples;
-    };
+            return samples;
+        };
 }
 
 // ─── Strategy 8: Moment matching ─────────────────────────────────────────────
@@ -238,7 +238,7 @@ SamplerFn make_importance_sampler(SP process, NS scheme, std::shared_ptr<Payoff>
 // Memory: O(n * steps) doubles. For n=10,000 and steps=52 this is ~4 MB.
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_moment_matching_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
-                                        size_t steps, double T) {
+                                       size_t steps, double T) {
     return [process, scheme, payoff, steps, T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};
         std::normal_distribution<double> ndist{0.0, 1.0};
@@ -293,8 +293,8 @@ SamplerFn make_moment_matching_sampler(SP process, NS scheme, std::shared_ptr<Pa
 // dimensions are uncorrelated), then converts to N(0,1) via normal_icdf.
 // Guarantees exact coverage of every marginal distribution.
 template <StochasticProcess SP, NumericalScheme<SP> NS>
-SamplerFn make_lhs_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
-                             size_t steps, double T) {
+SamplerFn make_lhs_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff, size_t steps,
+                           double T) {
     return [process, scheme, payoff, steps, T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};
         std::uniform_real_distribution<double> udist{0.0, 1.0};
@@ -346,7 +346,7 @@ SamplerFn make_lhs_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff
 // correlated higher dimensions within the pair.
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_stratified_antithetic_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
-                                              size_t steps, double T) {
+                                             size_t steps, double T) {
     return [process, scheme, payoff, steps, T](size_t n, uint64_t seed) -> std::vector<double> {
         std::mt19937_64 rng{seed};
         std::uniform_real_distribution<double> udist{0.0, 1.0};
@@ -376,8 +376,8 @@ SamplerFn make_stratified_antithetic_sampler(SP process, NS scheme, std::shared_
             auto r_pos = payoff->generate_payoffs({path_pos});
             auto r_neg = payoff->generate_payoffs({path_neg});
 
-            if (r_pos && r_neg && !r_pos->empty() && !r_neg->empty() &&
-                !(*r_pos)[0].empty() && !(*r_neg)[0].empty())
+            if (r_pos && r_neg && !r_pos->empty() && !r_neg->empty() && !(*r_pos)[0].empty() &&
+                !(*r_neg)[0].empty())
                 samples.push_back(0.5 * ((*r_pos)[0][0] + (*r_neg)[0][0]));
         }
         return samples;
@@ -400,12 +400,10 @@ build_all_strategies(SP process, NS scheme, std::shared_ptr<Payoff> payoff, doub
     return {
         {"plain_mc", make_plain_mc_sampler(process, scheme, payoff, steps, T)},
         {"antithetic", make_antithetic_sampler(process, scheme, payoff, steps, T)},
-        {"control_variate",
-         make_control_variate_sampler(process, scheme, payoff, control_payoff(), control_mean,
-                                       steps, T)},
-        {"antithetic_cv",
-         make_antithetic_cv_sampler(process, scheme, payoff, control_payoff(), control_mean, steps,
-                                     T)},
+        {"control_variate", make_control_variate_sampler(process, scheme, payoff, control_payoff(),
+                                                         control_mean, steps, T)},
+        {"antithetic_cv", make_antithetic_cv_sampler(process, scheme, payoff, control_payoff(),
+                                                     control_mean, steps, T)},
         {"stratified", make_stratified_sampler(process, scheme, payoff, steps, T)},
         {"halton_qmc", make_halton_sampler(process, scheme, payoff, steps, T)},
         {"importance_sampling",
