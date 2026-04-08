@@ -139,7 +139,8 @@ static double mc_reference_price(std::shared_ptr<Payoff> payoff, size_t steps) {
     auto fn = make_plain_mc_sampler(gbm, euler, payoff, steps, T);
     auto s = fn(500'000, detail::make_seed(42, 999));
     double sum = 0.0;
-    for (double x : s) sum += x;
+    for (double x : s)
+        sum += x;
     return sum / static_cast<double>(s.size());
 }
 
@@ -174,7 +175,8 @@ TEST_CASE("Up-and-Out Barrier Call convergence", "[exotic][convergence][barrier]
     // terms required when K < H. The result was a negative price (~-0.38), which is
     // impossible. The MC reference is also more appropriate because the simulation uses
     // discrete monitoring while the formula assumes continuous barriers.
-    double truth = mc_reference_price(std::make_shared<UpAndOutCall>(K, B_UP), static_cast<size_t>(STEPS));
+    double truth =
+        mc_reference_price(std::make_shared<UpAndOutCall>(K, B_UP), static_cast<size_t>(STEPS));
 
     auto results = run_convergence(
         "Up-and-Out Barrier Call", []() { return std::make_unique<UpAndOutCall>(K, B_UP); }, truth,
@@ -203,7 +205,8 @@ TEST_CASE("Lookback Call convergence", "[exotic][convergence][lookback]") {
     }
 }
 
-TEST_CASE("Sanity check: European Call matches Black-Scholes (undiscounted)", "[sanity][european]") {
+TEST_CASE("Sanity check: European Call matches Black-Scholes (undiscounted)",
+          "[sanity][european]") {
     // The Pipeline computes the UNDISCOUNTED E[max(S_T-K,0)] under the physical
     // measure. With mu=r=0.05, the undiscounted price = BS_call * exp(r*T).
     // The original test compared against the discounted BS price (~10.45) which
@@ -212,8 +215,8 @@ TEST_CASE("Sanity check: European Call matches Black-Scholes (undiscounted)", "[
     double bs_undiscounted = bs::european_call_undiscounted(S0, K, MU, SIGMA, T);
 
     auto results = run_convergence(
-        "European Call (BS sanity check, undiscounted)", []() { return std::make_unique<EuropeanCall>(K); },
-        bs_undiscounted, TIERS);
+        "European Call (BS sanity check, undiscounted)",
+        []() { return std::make_unique<EuropeanCall>(K); }, bs_undiscounted, TIERS);
 
     auto& last = results.back();
     // 10k samples, SE ≈ 0.15 for ATM call; allow 0.50 for a rough sanity check

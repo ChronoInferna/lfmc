@@ -32,8 +32,8 @@ enum class StrategyType { MC, QMC };
 
 // Named strategy: bundles a sampler with its display name and type tag.
 struct NamedStrategy {
-    std::string  name;
-    SamplerFn    sampler;
+    std::string name;
+    SamplerFn sampler;
     StrategyType type = StrategyType::MC;
 };
 
@@ -98,8 +98,8 @@ struct ASVRConfig {
 
 class AdaptiveVarianceReduction {
   public:
-    static ASVRResult run(std::vector<NamedStrategy> strategies,
-                          size_t total_samples, ASVRConfig config = {});
+    static ASVRResult run(std::vector<NamedStrategy> strategies, size_t total_samples,
+                          ASVRConfig config = {});
 
     static StrategyStats run_strategy_batch(const std::string& name, const SamplerFn& sampler,
                                             size_t n_samples, uint64_t seed);

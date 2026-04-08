@@ -3,8 +3,8 @@
 #include "lfmc/adaptive_estimator.hpp"
 #include "lfmc/numerical_scheme.hpp"
 #include "lfmc/payoff.hpp"
-#include "lfmc/strategies.hpp"
 #include "lfmc/stochastic_process.hpp"
+#include "lfmc/strategies.hpp"
 #include "lfmc/types.hpp"
 
 #include <algorithm>
@@ -66,38 +66,36 @@ struct IterativeEngineConfig {
 };
 
 struct RoundResult {
-    size_t         round;
-    std::string    leader;               // strategy leading after this round
-    bool           leader_changed;       // did the leader switch this round?
-    double         estimate;             // precision-weighted estimate so far
-    double         estimated_stderr;
+    size_t round;
+    std::string leader;  // strategy leading after this round
+    bool leader_changed; // did the leader switch this round?
+    double estimate;     // precision-weighted estimate so far
+    double estimated_stderr;
     std::vector<double> precision_weights; // one per strategy, after this round
 };
 
 struct IterativeEngineResult {
-    double      estimate;
-    double      estimated_stderr;
+    double estimate;
+    double estimated_stderr;
     std::string final_leader;
-    std::vector<RoundResult>    round_history;   // diagnostics per round
-    std::vector<StrategyStats>  final_stats;     // cumulative stats per strategy
-    size_t      total_samples;
+    std::vector<RoundResult> round_history; // diagnostics per round
+    std::vector<StrategyStats> final_stats; // cumulative stats per strategy
+    size_t total_samples;
 };
 
-template <StochasticProcess SP, NumericalScheme<SP> NS>
-class Engine {
-    SP     process_;
-    NS     scheme_;
+template <StochasticProcess SP, NumericalScheme<SP> NS> class Engine {
+    SP process_;
+    NS scheme_;
     double control_mean_;
     size_t steps_;
     double T_;
 
   public:
     Engine(SP process, NS scheme, double control_mean, size_t steps, double T)
-        : process_(process), scheme_(scheme), control_mean_(control_mean),
-          steps_(steps), T_(T) {}
+        : process_(process), scheme_(scheme), control_mean_(control_mean), steps_(steps), T_(T) {}
 
-    std::expected<IterativeEngineResult, std::string>
-    run(std::shared_ptr<Payoff> payoff, IterativeEngineConfig config = {}) {
+    std::expected<IterativeEngineResult, std::string> run(std::shared_ptr<Payoff> payoff,
+                                                          IterativeEngineConfig config = {}) {
         auto all = build_all_strategies(process_, scheme_, payoff, control_mean_, steps_, T_);
         const size_t K = std::min(config.n_compete, all.size());
         if (K == 0)
@@ -119,14 +117,14 @@ class Engine {
         // We track (sum, sum_sq, n) across all rounds so precision weights can
         // be recomputed from the full history after each round.
         struct Accumulator {
-            double sum         = 0.0;
-            double sum_sq      = 0.0;
-            size_t n           = 0;
+            double sum = 0.0;
+            double sum_sq = 0.0;
+            size_t n = 0;
             double wall_time_ms = 0.0; // cumulative wall time across all threads/rounds
 
             void add(const std::vector<double>& samples) {
                 for (double x : samples) {
-                    sum    += x;
+                    sum += x;
                     sum_sq += x * x;
                     ++n;
                 }
@@ -138,10 +136,10 @@ class Engine {
 
             // Unbiased sample variance (n-1 denominator)
             double variance() const {
-                if (n < 2) return std::numeric_limits<double>::infinity();
+                if (n < 2)
+                    return std::numeric_limits<double>::infinity();
                 const double m = mean();
-                return (sum_sq - static_cast<double>(n) * m * m) /
-                       static_cast<double>(n - 1);
+                return (sum_sq - static_cast<double>(n) * m * m) / static_cast<double>(n - 1);
             }
         };
 
@@ -164,7 +162,7 @@ class Engine {
                     var = accum[k].variance();
                 }
                 prec[k] = (var > 0.0 && std::isfinite(var)) ? 1.0 / var : 0.0;
-                total   += prec[k];
+                total += prec[k];
             }
             std::vector<double> w(K);
             if (total > 0.0) {
@@ -176,8 +174,8 @@ class Engine {
             return w;
         };
 
-        size_t leader        = 0; // index of current leader
-        bool   first_round   = true;
+        size_t leader = 0; // index of current leader
+        bool first_round = true;
         std::vector<RoundResult> history;
         history.reserve(config.n_rounds);
 
@@ -194,7 +192,7 @@ class Engine {
             std::vector<size_t> thread_counts(K, 1); // 1 compete thread each
             if (first_round) {
                 const size_t bonus_each = config.n_exploit / K;
-                const size_t leftover   = config.n_exploit % K;
+                const size_t leftover = config.n_exploit % K;
                 for (size_t k = 0; k < K; ++k)
                     thread_counts[k] += bonus_each;
                 thread_counts[0] += leftover;
@@ -211,7 +209,10 @@ class Engine {
             std::vector<std::vector<double>> round_samples(K);
             {
                 // Flatten to (strategy_idx, thread_idx) pairs for easy launch
-                struct Job { size_t k; size_t t; };
+                struct Job {
+                    size_t k;
+                    size_t t;
+                };
                 std::vector<Job> jobs;
                 for (size_t k = 0; k < K; ++k)
                     for (size_t t = 0; t < thread_counts[k]; ++t)
@@ -224,14 +225,14 @@ class Engine {
                     threads.reserve(jobs.size());
                     for (size_t j = 0; j < jobs.size(); ++j) {
                         threads.emplace_back([&, j]() {
-                            const size_t k      = jobs[j].k;
-                            const size_t t      = jobs[j].t;
+                            const size_t k = jobs[j].k;
+                            const size_t t = jobs[j].t;
                             const uint64_t seed = detail::make_seed(
                                 config.run_index * 1'000'000ULL + k * 10000 + t, round);
                             auto t0 = std::chrono::high_resolution_clock::now();
-                            thread_results[j]   = all[k].sampler(config.samples_per_thread, seed);
+                            thread_results[j] = all[k].sampler(config.samples_per_thread, seed);
                             auto t1 = std::chrono::high_resolution_clock::now();
-                            thread_times_ms[j]  =
+                            thread_times_ms[j] =
                                 std::chrono::duration<double, std::milli>(t1 - t0).count();
                         });
                     }
@@ -241,7 +242,7 @@ class Engine {
                 for (size_t j = 0; j < jobs.size(); ++j) {
                     const size_t k = jobs[j].k;
                     auto& dest = round_samples[k];
-                    auto& src  = thread_results[j];
+                    auto& src = thread_results[j];
                     dest.insert(dest.end(), src.begin(), src.end());
                     accum[k].wall_time_ms += thread_times_ms[j];
                 }
@@ -260,23 +261,29 @@ class Engine {
             // correctly reflects QMC's faster convergence.  Seeds in the dedicated
             // phase 0x8000+rep are disjoint from all regular round phases.
             if (round == 0 && config.qmc_replications >= 2) {
-                const size_t m     = config.qmc_replications;
+                const size_t m = config.qmc_replications;
                 const size_t sub_n = std::max(size_t{1}, config.samples_per_thread / m);
                 for (size_t k = 0; k < K; ++k) {
-                    if (!is_qmc[k]) continue;
+                    if (!is_qmc[k])
+                        continue;
                     std::vector<double> sub_means(m);
                     for (size_t rep = 0; rep < m; ++rep) {
                         const uint64_t sub_seed =
                             detail::make_seed(config.run_index * 1'000'000ULL + k * 10000 + rep,
                                               size_t{0x8000} + rep);
                         auto sub_s = all[k].sampler(sub_n, sub_seed);
-                        if (sub_s.empty()) { sub_means[rep] = 0.0; continue; }
+                        if (sub_s.empty()) {
+                            sub_means[rep] = 0.0;
+                            continue;
+                        }
                         double s = 0.0;
-                        for (double x : sub_s) s += x;
+                        for (double x : sub_s)
+                            s += x;
                         sub_means[rep] = s / static_cast<double>(sub_s.size());
                     }
                     double mean_of_means = 0.0;
-                    for (double mu : sub_means) mean_of_means += mu;
+                    for (double mu : sub_means)
+                        mean_of_means += mu;
                     mean_of_means /= static_cast<double>(m);
                     double sq = 0.0;
                     for (double mu : sub_means) {
@@ -287,13 +294,12 @@ class Engine {
                     // Multiply by sub_n to recover per-sample-equivalent scale so
                     // this precision weight is directly comparable to the per-sample
                     // variance used for MC strategies in precision_weights().
-                    qmc_mean_var[k] = sq / static_cast<double>(m - 1) *
-                                      static_cast<double>(sub_n);
+                    qmc_mean_var[k] = sq / static_cast<double>(m - 1) * static_cast<double>(sub_n);
                 }
             }
 
             // -- Recompute precision weights and current leader -------------------
-            auto weights  = precision_weights();
+            auto weights = precision_weights();
             size_t new_leader = static_cast<size_t>(
                 std::max_element(weights.begin(), weights.end()) - weights.begin());
 
@@ -307,26 +313,25 @@ class Engine {
             for (size_t k = 0; k < K; ++k) {
                 double var_k = accum[k].variance();
                 if (std::isfinite(var_k) && accum[k].n > 0)
-                    var_est += weights[k] * weights[k] * var_k /
-                               static_cast<double>(accum[k].n);
+                    var_est += weights[k] * weights[k] * var_k / static_cast<double>(accum[k].n);
             }
 
             history.push_back({
-                .round            = round + 1,
-                .leader           = all[new_leader].name,
-                .leader_changed   = (!first_round && new_leader != leader),
-                .estimate         = est,
+                .round = round + 1,
+                .leader = all[new_leader].name,
+                .leader_changed = (!first_round && new_leader != leader),
+                .estimate = est,
                 .estimated_stderr = std::sqrt(var_est),
                 .precision_weights = weights,
             });
 
-            leader      = new_leader;
+            leader = new_leader;
             first_round = false;
         }
 
         // -- Final estimate --------------------------------------------------
         auto final_weights = precision_weights();
-        double final_est   = 0.0;
+        double final_est = 0.0;
         for (size_t k = 0; k < K; ++k)
             final_est += final_weights[k] * accum[k].mean();
 
@@ -334,29 +339,29 @@ class Engine {
         for (size_t k = 0; k < K; ++k) {
             double var_k = accum[k].variance();
             if (std::isfinite(var_k) && accum[k].n > 0)
-                final_var += final_weights[k] * final_weights[k] * var_k /
-                             static_cast<double>(accum[k].n);
+                final_var +=
+                    final_weights[k] * final_weights[k] * var_k / static_cast<double>(accum[k].n);
         }
 
         // -- Pack cumulative StrategyStats for diagnostics ----------------------
         std::vector<StrategyStats> final_stats(K);
         for (size_t k = 0; k < K; ++k) {
             final_stats[k] = {
-                .name            = all[k].name,
-                .mean            = accum[k].mean(),
+                .name = all[k].name,
+                .mean = accum[k].mean(),
                 .sample_variance = accum[k].variance(),
-                .wall_time_ms    = accum[k].wall_time_ms,
-                .n_samples       = accum[k].n,
+                .wall_time_ms = accum[k].wall_time_ms,
+                .n_samples = accum[k].n,
             };
         }
 
         return IterativeEngineResult{
-            .estimate          = final_est,
-            .estimated_stderr  = std::sqrt(final_var),
-            .final_leader      = all[leader].name,
-            .round_history     = history,
-            .final_stats       = final_stats,
-            .total_samples     = total_samples,
+            .estimate = final_est,
+            .estimated_stderr = std::sqrt(final_var),
+            .final_leader = all[leader].name,
+            .round_history = history,
+            .final_stats = final_stats,
+            .total_samples = total_samples,
         };
     }
 };

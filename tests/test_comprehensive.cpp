@@ -25,12 +25,11 @@
 #include "lfmc/stochastic_process.hpp"
 #include "lfmc/strategies.hpp"
 
+#include <algorithm>
+#include <atomic>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-
-#include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <mutex>
 #include <numeric>
@@ -48,7 +47,9 @@ using Catch::Matchers::WithinRel;
 
 namespace ref {
 
-static double ncdf(double x) { return 0.5 * std::erfc(-x / std::sqrt(2.0)); }
+static double ncdf(double x) {
+    return 0.5 * std::erfc(-x / std::sqrt(2.0));
+}
 
 // Black-Scholes discounted European call
 static double bs_call(double S, double K, double r, double sigma, double T) {
@@ -81,11 +82,11 @@ static double undiscounted_put(double S, double K, double r, double sigma, doubl
 // Test fixtures / shared helpers
 // ---------------------------------------------------------------------------
 
-static constexpr double S0    = 100.0;
-static constexpr double MU    = 0.05; // also used as the risk-free rate
+static constexpr double S0 = 100.0;
+static constexpr double MU = 0.05; // also used as the risk-free rate
 static constexpr double SIGMA = 0.20;
-static constexpr double K     = 100.0;
-static constexpr double T     = 1.0;
+static constexpr double K = 100.0;
+static constexpr double T = 1.0;
 static constexpr size_t STEPS = 52; // weekly steps
 
 static const double CTRL_MEAN = S0 * std::exp(MU * T); // E[S_T] under physical measure
@@ -98,10 +99,14 @@ static std::pair<double, double> sample_stats(const SamplerFn& fn, size_t n, uin
     auto s = fn(n, seed);
     const double nd = static_cast<double>(s.size());
     double sum = 0.0;
-    for (double x : s) sum += x;
+    for (double x : s)
+        sum += x;
     const double mean = sum / nd;
     double sq = 0.0;
-    for (double x : s) { double d = x - mean; sq += d * d; }
+    for (double x : s) {
+        double d = x - mean;
+        sq += d * d;
+    }
     return {mean, sq / (nd - 1.0)};
 }
 
@@ -178,12 +183,11 @@ TEST_CASE("correctness: all 10 strategies are unbiased for ATM European call", "
 
     for (const auto& s : strategies) {
         auto [mean, var] = sample_stats(s.sampler, N, detail::make_seed(0, 1));
-        const double se  = std::sqrt(var / static_cast<double>(N));
+        const double se = std::sqrt(var / static_cast<double>(N));
 
         INFO("Strategy: " << s.name);
-        INFO("  mean = " << mean << "  true = " << true_price
-             << "  |error| = " << std::abs(mean - true_price)
-             << "  5*se = " << 5.0 * se);
+        INFO("  mean = " << mean << "  true = " << true_price << "  |error| = "
+                         << std::abs(mean - true_price) << "  5*se = " << 5.0 * se);
 
         // 5-sigma bound: failure probability < 6e-5 per test
         REQUIRE(std::abs(mean - true_price) < 5.0 * se);
@@ -202,11 +206,10 @@ TEST_CASE("correctness: all 10 strategies are unbiased for ATM European put", "[
 
     for (const auto& s : strategies) {
         auto [mean, var] = sample_stats(s.sampler, N, detail::make_seed(0, 2));
-        const double se  = std::sqrt(var / static_cast<double>(N));
+        const double se = std::sqrt(var / static_cast<double>(N));
 
         INFO("Strategy: " << s.name);
-        INFO("  mean = " << mean << "  true = " << true_price
-             << "  5*se = " << 5.0 * se);
+        INFO("  mean = " << mean << "  true = " << true_price << "  5*se = " << 5.0 * se);
 
         REQUIRE(std::abs(mean - true_price) < 5.0 * se);
     }
@@ -219,12 +222,12 @@ TEST_CASE("correctness: put-call parity holds for plain MC (undiscounted)", "[co
     const double expected_diff = S0 * std::exp(MU * T) - K;
 
     auto call_fn = make_plain_mc_sampler(GBM, EM, std::make_shared<EuropeanCall>(K), STEPS, T);
-    auto put_fn  = make_plain_mc_sampler(GBM, EM, std::make_shared<EuropeanPut>(K),  STEPS, T);
+    auto put_fn = make_plain_mc_sampler(GBM, EM, std::make_shared<EuropeanPut>(K), STEPS, T);
 
     constexpr size_t N = 100'000;
     // Use same seed so the paths are the same → tight cancellation
     auto [call_mean, call_var] = sample_stats(call_fn, N, detail::make_seed(77, 0));
-    auto [put_mean,  put_var]  = sample_stats(put_fn,  N, detail::make_seed(77, 0));
+    auto [put_mean, put_var] = sample_stats(put_fn, N, detail::make_seed(77, 0));
 
     const double diff = call_mean - put_mean;
     // SE of the difference: these share paths only by seed coincidence (different RNG state
@@ -247,10 +250,10 @@ TEST_CASE("correctness: importance sampling unbiased across theta values", "[cor
     for (double theta : {0.0, 0.25, 0.5, 1.0, 1.5}) {
         auto fn = make_importance_sampler(GBM, EM, payoff, STEPS, T, theta);
         auto [mean, var] = sample_stats(fn, N, detail::make_seed(3, 5));
-        const double se  = std::sqrt(var / static_cast<double>(N));
+        const double se = std::sqrt(var / static_cast<double>(N));
 
-        INFO("theta = " << theta << "  mean = " << mean
-             << "  true = " << true_price << "  5*se = " << 5.0 * se);
+        INFO("theta = " << theta << "  mean = " << mean << "  true = " << true_price
+                        << "  5*se = " << 5.0 * se);
 
         REQUIRE(std::abs(mean - true_price) < 5.0 * se);
     }
@@ -274,7 +277,7 @@ struct VRResult {
 // Run all 10 strategies and plain MC at N samples, return sorted VR results
 static std::vector<VRResult> compute_vr_ratios(std::shared_ptr<Payoff> payoff, size_t N) {
     auto strategies = build_all_strategies(GBM, EM, payoff, CTRL_MEAN, STEPS, T);
-    auto plain_fn   = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
+    auto plain_fn = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
 
     auto [plain_mean, plain_var] = sample_stats(plain_fn, N, detail::make_seed(100, 0));
     (void)plain_mean;
@@ -294,12 +297,13 @@ TEST_CASE("vr: antithetic reduces variance vs plain MC for European call", "[vr]
     auto payoff = std::make_shared<EuropeanCall>(K);
     constexpr size_t N = 100'000;
 
-    auto plain  = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
-    auto anti   = make_antithetic_sampler(GBM, EM, payoff, STEPS, T);
+    auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
+    auto anti = make_antithetic_sampler(GBM, EM, payoff, STEPS, T);
 
     auto [pm, pv] = sample_stats(plain, N, detail::make_seed(10, 0));
-    auto [am, av] = sample_stats(anti,  N, detail::make_seed(11, 0));
-    (void)pm; (void)am;
+    auto [am, av] = sample_stats(anti, N, detail::make_seed(11, 0));
+    (void)pm;
+    (void)am;
 
     const double ratio = pv / av;
     INFO("Antithetic VR ratio (plain_var/anti_var): " << ratio);
@@ -314,13 +318,13 @@ TEST_CASE("vr: control variate reduces variance vs plain MC for European call", 
     constexpr size_t N = 100'000;
 
     auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
-    auto cv    = make_control_variate_sampler(GBM, EM, payoff,
-                                              std::make_shared<EuropeanCall>(0.0),
-                                              CTRL_MEAN, STEPS, T);
+    auto cv = make_control_variate_sampler(GBM, EM, payoff, std::make_shared<EuropeanCall>(0.0),
+                                           CTRL_MEAN, STEPS, T);
 
     auto [pm, pv] = sample_stats(plain, N, detail::make_seed(20, 0));
-    auto [cm, cv_] = sample_stats(cv,  N, detail::make_seed(21, 0));
-    (void)pm; (void)cm;
+    auto [cm, cv_] = sample_stats(cv, N, detail::make_seed(21, 0));
+    (void)pm;
+    (void)cm;
 
     const double ratio = pv / cv_;
     INFO("Control variate VR ratio: " << ratio);
@@ -333,20 +337,21 @@ TEST_CASE("vr: antithetic+CV reduces variance more than either alone", "[vr]") {
     auto payoff = std::make_shared<EuropeanCall>(K);
     constexpr size_t N = 100'000;
 
-    auto plain    = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
-    auto anti     = make_antithetic_sampler(GBM, EM, payoff, STEPS, T);
-    auto cv       = make_control_variate_sampler(GBM, EM, payoff,
-                                                 std::make_shared<EuropeanCall>(0.0),
-                                                 CTRL_MEAN, STEPS, T);
-    auto anti_cv  = make_antithetic_cv_sampler(GBM, EM, payoff,
-                                               std::make_shared<EuropeanCall>(0.0),
-                                               CTRL_MEAN, STEPS, T);
+    auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
+    auto anti = make_antithetic_sampler(GBM, EM, payoff, STEPS, T);
+    auto cv = make_control_variate_sampler(GBM, EM, payoff, std::make_shared<EuropeanCall>(0.0),
+                                           CTRL_MEAN, STEPS, T);
+    auto anti_cv = make_antithetic_cv_sampler(GBM, EM, payoff, std::make_shared<EuropeanCall>(0.0),
+                                              CTRL_MEAN, STEPS, T);
 
-    auto [pm, pv]  = sample_stats(plain,   N, detail::make_seed(30, 0));
-    auto [am, av]  = sample_stats(anti,    N, detail::make_seed(31, 0));
-    auto [cm, cv_] = sample_stats(cv,      N, detail::make_seed(32, 0));
-    auto [acm, acv]= sample_stats(anti_cv, N, detail::make_seed(33, 0));
-    (void)pm; (void)am; (void)cm; (void)acm;
+    auto [pm, pv] = sample_stats(plain, N, detail::make_seed(30, 0));
+    auto [am, av] = sample_stats(anti, N, detail::make_seed(31, 0));
+    auto [cm, cv_] = sample_stats(cv, N, detail::make_seed(32, 0));
+    auto [acm, acv] = sample_stats(anti_cv, N, detail::make_seed(33, 0));
+    (void)pm;
+    (void)am;
+    (void)cm;
+    (void)acm;
 
     INFO("VR ratios (plain_var / strategy_var):");
     INFO("  plain:       1.00");
@@ -363,12 +368,13 @@ TEST_CASE("vr: halton QMC reduces variance vs plain MC for European call", "[vr]
     auto payoff = std::make_shared<EuropeanCall>(K);
     constexpr size_t N = 100'000;
 
-    auto plain  = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
+    auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
     auto halton = make_halton_sampler(GBM, EM, payoff, STEPS, T);
 
-    auto [pm, pv] = sample_stats(plain,  N, detail::make_seed(40, 0));
+    auto [pm, pv] = sample_stats(plain, N, detail::make_seed(40, 0));
     auto [hm, hv] = sample_stats(halton, N, detail::make_seed(41, 0));
-    (void)pm; (void)hm;
+    (void)pm;
+    (void)hm;
 
     const double ratio = pv / hv;
     INFO("Halton QMC VR ratio: " << ratio);
@@ -388,11 +394,12 @@ TEST_CASE("vr: moment matching reduces variance vs plain MC", "[vr]") {
     constexpr size_t N = 100'000;
 
     auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
-    auto mm    = make_moment_matching_sampler(GBM, EM, payoff, STEPS, T);
+    auto mm = make_moment_matching_sampler(GBM, EM, payoff, STEPS, T);
 
     auto [pm, pv] = sample_stats(plain, N, detail::make_seed(50, 0));
     auto [mm_m, mmv] = sample_stats(mm, N, detail::make_seed(51, 0));
-    (void)pm; (void)mm_m;
+    (void)pm;
+    (void)mm_m;
 
     const double ratio = pv / mmv;
     INFO("Moment matching VR ratio (plain_var/mm_var): " << ratio);
@@ -410,11 +417,12 @@ TEST_CASE("vr: LHS reduces variance vs plain MC", "[vr]") {
     constexpr size_t N = 100'000;
 
     auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
-    auto lhs   = make_lhs_sampler(GBM, EM, payoff, STEPS, T);
+    auto lhs = make_lhs_sampler(GBM, EM, payoff, STEPS, T);
 
     auto [pm, pv] = sample_stats(plain, N, detail::make_seed(60, 0));
-    auto [lm, lv] = sample_stats(lhs,   N, detail::make_seed(61, 0));
-    (void)pm; (void)lm;
+    auto [lm, lv] = sample_stats(lhs, N, detail::make_seed(61, 0));
+    (void)pm;
+    (void)lm;
 
     const double ratio = pv / lv;
     INFO("LHS VR ratio (plain_var/lhs_var): " << ratio);
@@ -428,11 +436,12 @@ TEST_CASE("vr: stratified antithetic reduces variance vs plain MC", "[vr]") {
     constexpr size_t N = 100'000;
 
     auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
-    auto sa    = make_stratified_antithetic_sampler(GBM, EM, payoff, STEPS, T);
+    auto sa = make_stratified_antithetic_sampler(GBM, EM, payoff, STEPS, T);
 
     auto [pm, pv] = sample_stats(plain, N, detail::make_seed(70, 0));
-    auto [sm, sv] = sample_stats(sa,    N, detail::make_seed(71, 0));
-    (void)pm; (void)sm;
+    auto [sm, sv] = sample_stats(sa, N, detail::make_seed(71, 0));
+    (void)pm;
+    (void)sm;
 
     const double ratio = pv / sv;
     INFO("Stratified antithetic VR ratio: " << ratio);
@@ -459,10 +468,10 @@ TEST_CASE("vr: full strategy table for European call and Asian call", "[vr][slow
     };
 
     run_for("European Call", std::make_shared<EuropeanCall>(K));
-    run_for("European Put",  std::make_shared<EuropeanPut>(K));
-    run_for("Asian Call",    std::make_shared<AsianCall>(K));
-    run_for("Asian Put",     std::make_shared<AsianPut>(K));
-    run_for("Barrier UOC",   std::make_shared<UpAndOutCall>(K, 130.0));
+    run_for("European Put", std::make_shared<EuropeanPut>(K));
+    run_for("Asian Call", std::make_shared<AsianCall>(K));
+    run_for("Asian Put", std::make_shared<AsianPut>(K));
+    run_for("Barrier UOC", std::make_shared<UpAndOutCall>(K, 130.0));
     run_for("Lookback Call", std::make_shared<LookbackCall>());
 
     // Print table
@@ -503,9 +512,9 @@ TEST_CASE("bandit: precision weights are inverse-variance normalised", "[bandit]
 
     // Construct StrategyStats with known variances
     std::vector<StrategyStats> stats = {
-        {"a", 10.0, 4.0,  0.0, 100},  // precision = 1/4 = 0.25
-        {"b", 10.0, 1.0,  0.0, 100},  // precision = 1/1 = 1.0
-        {"c", 10.0, 0.25, 0.0, 100},  // precision = 1/0.25 = 4.0
+        {"a", 10.0, 4.0, 0.0, 100},  // precision = 1/4 = 0.25
+        {"b", 10.0, 1.0, 0.0, 100},  // precision = 1/1 = 1.0
+        {"c", 10.0, 0.25, 0.0, 100}, // precision = 1/0.25 = 4.0
     };
     // Total precision = 0.25 + 1.0 + 4.0 = 5.25
     // Expected weights: 0.25/5.25, 1.0/5.25, 4.0/5.25
@@ -521,7 +530,8 @@ TEST_CASE("bandit: precision weights are inverse-variance normalised", "[bandit]
             std::mt19937_64 rng{seed};
             std::normal_distribution<double> d{mean, stddev};
             std::vector<double> v(n);
-            for (auto& x : v) x = d(rng);
+            for (auto& x : v)
+                x = d(rng);
             return v;
         };
     };
@@ -530,9 +540,9 @@ TEST_CASE("bandit: precision weights are inverse-variance normalised", "[bandit]
     // std 1.0 → var ≈ 1.0
     // std 0.5 → var ≈ 0.25
     std::vector<NamedStrategy> strategies = {
-        {"high_var",  make_const_var_sampler(10.0, 2.0)},
-        {"mid_var",   make_const_var_sampler(10.0, 1.0)},
-        {"low_var",   make_const_var_sampler(10.0, 0.5)},
+        {"high_var", make_const_var_sampler(10.0, 2.0)},
+        {"mid_var", make_const_var_sampler(10.0, 1.0)},
+        {"low_var", make_const_var_sampler(10.0, 0.5)},
     };
 
     ASVRConfig cfg;
@@ -568,9 +578,9 @@ TEST_CASE("bandit: engine leader changes when a better strategy emerges", "[band
         GBM, EM, CTRL_MEAN, STEPS, T};
 
     IterativeEngineConfig cfg;
-    cfg.n_compete          = 4;
-    cfg.n_exploit          = 8;
-    cfg.n_rounds           = 8;
+    cfg.n_compete = 4;
+    cfg.n_exploit = 8;
+    cfg.n_rounds = 8;
     cfg.samples_per_thread = 1000;
 
     auto result = engine.run(std::make_shared<EuropeanCall>(K), cfg);
@@ -581,7 +591,7 @@ TEST_CASE("bandit: engine leader changes when a better strategy emerges", "[band
     // Report leader per round
     for (const auto& r : h)
         INFO("Round " << r.round << ": leader=" << r.leader
-             << (r.leader_changed ? " [SWITCHED]" : ""));
+                      << (r.leader_changed ? " [SWITCHED]" : ""));
 
     // The final leader should NOT be plain_mc
     INFO("Final leader: " << result->final_leader);
@@ -594,9 +604,9 @@ TEST_CASE("bandit: engine bonus threads go to leader in round 2+", "[bandit]") {
         GBM, EM, CTRL_MEAN, STEPS, T};
 
     IterativeEngineConfig cfg;
-    cfg.n_compete          = 4;
-    cfg.n_exploit          = 8;
-    cfg.n_rounds           = 5;
+    cfg.n_compete = 4;
+    cfg.n_exploit = 8;
+    cfg.n_rounds = 5;
     cfg.samples_per_thread = 500;
 
     auto result = engine.run(std::make_shared<EuropeanCall>(K), cfg);
@@ -622,7 +632,8 @@ TEST_CASE("bandit: engine precision weights sum to 1 after every round", "[bandi
 
     for (const auto& r : result->round_history) {
         double wsum = 0.0;
-        for (double w : r.precision_weights) wsum += w;
+        for (double w : r.precision_weights)
+            wsum += w;
         INFO("Round " << r.round << " weight sum = " << wsum);
         REQUIRE_THAT(wsum, WithinAbs(1.0, 1e-10));
     }
@@ -635,9 +646,9 @@ TEST_CASE("bandit: engine leader_changed flag is accurate", "[bandit]") {
         GBM, EM, CTRL_MEAN, STEPS, T};
 
     IterativeEngineConfig cfg;
-    cfg.n_compete          = 4;
-    cfg.n_exploit          = 8;
-    cfg.n_rounds           = 8;
+    cfg.n_compete = 4;
+    cfg.n_exploit = 8;
+    cfg.n_rounds = 8;
     cfg.samples_per_thread = 1500;
 
     auto result = engine.run(std::make_shared<EuropeanCall>(K), cfg);
@@ -651,9 +662,8 @@ TEST_CASE("bandit: engine leader_changed flag is accurate", "[bandit]") {
     // Verify leader_changed is consistent with actual leader transitions
     for (size_t i = 1; i < h.size(); ++i) {
         bool changed = (h[i].leader != h[i - 1].leader);
-        INFO("Round " << h[i].round << ": " << h[i - 1].leader
-             << " → " << h[i].leader << "  flag=" << h[i].leader_changed
-             << "  expected=" << changed);
+        INFO("Round " << h[i].round << ": " << h[i - 1].leader << " → " << h[i].leader
+                      << "  flag=" << h[i].leader_changed << "  expected=" << changed);
         REQUIRE(h[i].leader_changed == changed);
     }
 }
@@ -709,8 +719,8 @@ TEST_CASE("asvr: exploitation allocation is proportional to precision weights", 
     auto result = AdaptiveVarianceReduction::run(strategies, N, cfg);
 
     const auto& weights = result.precision_weights;
-    const auto& counts  = result.exploitation_counts;
-    const double n_exp  = static_cast<double>(result.n_exploitation);
+    const auto& counts = result.exploitation_counts;
+    const double n_exp = static_cast<double>(result.n_exploitation);
 
     INFO("Precision weights vs allocation fractions:");
     double total_alloc_err = 0.0;
@@ -718,9 +728,8 @@ TEST_CASE("asvr: exploitation allocation is proportional to precision weights", 
         const double alloc_frac = static_cast<double>(counts[k]) / n_exp;
         const double err = std::abs(alloc_frac - weights[k]);
         total_alloc_err += err;
-        INFO("  [" << k << "] weight=" << weights[k]
-             << "  alloc_frac=" << alloc_frac
-             << "  |err|=" << err);
+        INFO("  [" << k << "] weight=" << weights[k] << "  alloc_frac=" << alloc_frac
+                   << "  |err|=" << err);
     }
 
     // Total allocation error should be tiny (rounding only)
@@ -743,7 +752,8 @@ TEST_CASE("asvr: exploitation counts sum exactly to n_exploitation", "[asvr]") {
     auto result = AdaptiveVarianceReduction::run(strategies, N, cfg);
 
     size_t count_sum = 0;
-    for (size_t c : result.exploitation_counts) count_sum += c;
+    for (size_t c : result.exploitation_counts)
+        count_sum += c;
 
     INFO("Sum of exploitation counts: " << count_sum);
     INFO("n_exploitation:             " << result.n_exploitation);
@@ -761,20 +771,24 @@ TEST_CASE("asvr: weights sum to 1.0 exactly", "[asvr]") {
     auto result = AdaptiveVarianceReduction::run(strategies, 10'000, cfg);
 
     double wsum = 0.0;
-    for (double w : result.precision_weights) wsum += w;
+    for (double w : result.precision_weights)
+        wsum += w;
 
     INFO("Weight sum: " << wsum);
     REQUIRE_THAT(wsum, WithinAbs(1.0, 1e-10));
 }
 
 TEST_CASE("asvr: VR ratio > 1 for all option types", "[asvr]") {
-    struct Case { const char* name; std::shared_ptr<Payoff> payoff; };
+    struct Case {
+        const char* name;
+        std::shared_ptr<Payoff> payoff;
+    };
     std::vector<Case> cases = {
-        {"European Call",  std::make_shared<EuropeanCall>(K)},
-        {"European Put",   std::make_shared<EuropeanPut>(K)},
-        {"Asian Call",     std::make_shared<AsianCall>(K)},
-        {"Barrier UOC",    std::make_shared<UpAndOutCall>(K, 130.0)},
-        {"Lookback Call",  std::make_shared<LookbackCall>()},
+        {"European Call", std::make_shared<EuropeanCall>(K)},
+        {"European Put", std::make_shared<EuropeanPut>(K)},
+        {"Asian Call", std::make_shared<AsianCall>(K)},
+        {"Barrier UOC", std::make_shared<UpAndOutCall>(K, 130.0)},
+        {"Lookback Call", std::make_shared<LookbackCall>()},
     };
 
     ASVRConfig cfg;
@@ -802,19 +816,24 @@ TEST_CASE("asvr: VR ratio > 1 for all option types", "[asvr]") {
 // should have coverage ≈ 95%. We require 85–99% (±3 sigma of binomial).
 // =============================================================================
 
-static double ci_coverage(const SamplerFn& fn, double true_value,
-                           size_t n_per_run, size_t n_runs, double z = 1.96) {
+static double ci_coverage(const SamplerFn& fn, double true_value, size_t n_per_run, size_t n_runs,
+                          double z = 1.96) {
     size_t hits = 0;
     for (size_t r = 0; r < n_runs; ++r) {
         auto s = fn(n_per_run, detail::make_seed(r + 1000, 77));
         const double nd = static_cast<double>(s.size());
         double sum = 0.0;
-        for (double x : s) sum += x;
+        for (double x : s)
+            sum += x;
         const double mean = sum / nd;
         double sq = 0.0;
-        for (double x : s) { double d = x - mean; sq += d * d; }
+        for (double x : s) {
+            double d = x - mean;
+            sq += d * d;
+        }
         const double se = std::sqrt(sq / (nd * (nd - 1.0)));
-        if (std::abs(mean - true_value) <= z * se) ++hits;
+        if (std::abs(mean - true_value) <= z * se)
+            ++hits;
     }
     return static_cast<double>(hits) / static_cast<double>(n_runs);
 }
@@ -822,12 +841,12 @@ static double ci_coverage(const SamplerFn& fn, double true_value,
 TEST_CASE("coverage: plain MC 95% CI has correct coverage", "[coverage]") {
     // True price obtained from a very large reference run
     auto ref_fn = plain_call_sampler();
-    auto ref    = ref_fn(500'000, detail::make_seed(0, 999));
-    const double true_price = std::accumulate(ref.begin(), ref.end(), 0.0) /
-                              static_cast<double>(ref.size());
+    auto ref = ref_fn(500'000, detail::make_seed(0, 999));
+    const double true_price =
+        std::accumulate(ref.begin(), ref.end(), 0.0) / static_cast<double>(ref.size());
 
     constexpr size_t N_PER_RUN = 5'000;
-    constexpr size_t N_RUNS    = 300;
+    constexpr size_t N_RUNS = 300;
 
     const double coverage = ci_coverage(plain_call_sampler(), true_price, N_PER_RUN, N_RUNS);
 
@@ -842,14 +861,14 @@ TEST_CASE("coverage: plain MC 95% CI has correct coverage", "[coverage]") {
 
 TEST_CASE("coverage: antithetic 95% CI has correct coverage", "[coverage]") {
     auto ref_fn = plain_call_sampler();
-    auto ref    = ref_fn(500'000, detail::make_seed(0, 999));
-    const double true_price = std::accumulate(ref.begin(), ref.end(), 0.0) /
-                              static_cast<double>(ref.size());
+    auto ref = ref_fn(500'000, detail::make_seed(0, 999));
+    const double true_price =
+        std::accumulate(ref.begin(), ref.end(), 0.0) / static_cast<double>(ref.size());
 
     auto anti = make_antithetic_sampler(GBM, EM, std::make_shared<EuropeanCall>(K), STEPS, T);
 
     constexpr size_t N_PER_RUN = 5'000;
-    constexpr size_t N_RUNS    = 300;
+    constexpr size_t N_RUNS = 300;
 
     const double coverage = ci_coverage(anti, true_price, N_PER_RUN, N_RUNS);
 
@@ -860,16 +879,16 @@ TEST_CASE("coverage: antithetic 95% CI has correct coverage", "[coverage]") {
 
 TEST_CASE("coverage: control variate 95% CI has correct coverage", "[coverage]") {
     auto ref_fn = plain_call_sampler();
-    auto ref    = ref_fn(500'000, detail::make_seed(0, 999));
-    const double true_price = std::accumulate(ref.begin(), ref.end(), 0.0) /
-                              static_cast<double>(ref.size());
+    auto ref = ref_fn(500'000, detail::make_seed(0, 999));
+    const double true_price =
+        std::accumulate(ref.begin(), ref.end(), 0.0) / static_cast<double>(ref.size());
 
-    auto cv = make_control_variate_sampler(GBM, EM, std::make_shared<EuropeanCall>(K),
-                                            std::make_shared<EuropeanCall>(0.0),
-                                            CTRL_MEAN, STEPS, T);
+    auto cv =
+        make_control_variate_sampler(GBM, EM, std::make_shared<EuropeanCall>(K),
+                                     std::make_shared<EuropeanCall>(0.0), CTRL_MEAN, STEPS, T);
 
     constexpr size_t N_PER_RUN = 5'000;
-    constexpr size_t N_RUNS    = 300;
+    constexpr size_t N_RUNS = 300;
 
     const double coverage = ci_coverage(cv, true_price, N_PER_RUN, N_RUNS);
 
@@ -904,7 +923,8 @@ TEST_CASE("convergence: plain MC variance decreases as O(1/N)", "[convergence]")
         const double se_l = std::sqrt(vl / N_LARGE);
         sum_sq_small += se_s;
         sum_sq_large += se_l;
-        (void)ms; (void)ml;
+        (void)ms;
+        (void)ml;
         sum_small += se_s;
         sum_large += se_l;
     }
@@ -914,8 +934,8 @@ TEST_CASE("convergence: plain MC variance decreases as O(1/N)", "[convergence]")
     const double ratio = mean_se_small / mean_se_large;
 
     // Expected ratio: sqrt(N_LARGE / N_SMALL) = sqrt(8) ≈ 2.83
-    const double expected_ratio = std::sqrt(static_cast<double>(N_LARGE) /
-                                            static_cast<double>(N_SMALL));
+    const double expected_ratio =
+        std::sqrt(static_cast<double>(N_LARGE) / static_cast<double>(N_SMALL));
 
     INFO("Mean SE at N=" << N_SMALL << ":  " << mean_se_small);
     INFO("Mean SE at N=" << N_LARGE << ": " << mean_se_large);
@@ -937,14 +957,15 @@ TEST_CASE("convergence: QMC (Halton) converges faster than plain MC", "[converge
     // option types and verifies the overall VR ratio > 1.
 
     auto payoff = std::make_shared<EuropeanCall>(K);
-    auto plain  = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
+    auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
     auto halton = make_halton_sampler(GBM, EM, payoff, STEPS, T);
 
     // Use a large N to average out single-trial noise
     constexpr size_t N = 100'000;
-    auto [pm, pv] = sample_stats(plain,  N, detail::make_seed(200, 0));
+    auto [pm, pv] = sample_stats(plain, N, detail::make_seed(200, 0));
     auto [hm, hv] = sample_stats(halton, N, detail::make_seed(201, 0));
-    (void)pm; (void)hm;
+    (void)pm;
+    (void)hm;
 
     const double ratio = pv / hv;
     INFO("Halton QMC VR ratio at N=" << N << ": " << ratio);
@@ -969,7 +990,8 @@ TEST_CASE("convergence: antithetic variance scales with N like plain MC", "[conv
         // Variance of the mean = sample_var / N
         mean_var1 += v1 / N1;
         mean_var2 += v2 / N2;
-        (void)m1; (void)m2;
+        (void)m1;
+        (void)m2;
     }
     mean_var1 /= REPS;
     mean_var2 /= REPS;
@@ -998,7 +1020,7 @@ TEST_CASE("edge: deep ITM European call (S >> K)", "[edge]") {
 
     const double true_price = ref::undiscounted_call(S0_itm, K, MU, SIGMA, T);
     auto [mean, var] = sample_stats(fn, 50'000, detail::make_seed(500, 0));
-    const double se  = std::sqrt(var / 50'000.0);
+    const double se = std::sqrt(var / 50'000.0);
 
     INFO("Deep ITM call: S0=" << S0_itm << " K=" << K);
     INFO("  true price (undiscounted) = " << true_price);
@@ -1017,7 +1039,7 @@ TEST_CASE("edge: deep OTM European call (S << K)", "[edge]") {
 
     const double true_price = ref::undiscounted_call(S0_otm, K, MU, SIGMA, T);
     auto [mean, var] = sample_stats(fn, 100'000, detail::make_seed(600, 0));
-    const double se  = std::sqrt(var / 100'000.0);
+    const double se = std::sqrt(var / 100'000.0);
 
     INFO("Deep OTM call: S0=" << S0_otm << " K=" << K);
     INFO("  true price (undiscounted) = " << true_price);
@@ -1035,7 +1057,7 @@ TEST_CASE("edge: deep ITM European put (S << K)", "[edge]") {
 
     const double true_price = ref::undiscounted_put(S0_put, K, MU, SIGMA, T);
     auto [mean, var] = sample_stats(fn, 50'000, detail::make_seed(700, 0));
-    const double se  = std::sqrt(var / 50'000.0);
+    const double se = std::sqrt(var / 50'000.0);
 
     INFO("Deep ITM put: S0=" << S0_put << " K=" << K);
     INFO("  true price = " << true_price << "  MC = " << mean << " ± " << se);
@@ -1047,14 +1069,14 @@ TEST_CASE("edge: deep ITM European put (S << K)", "[edge]") {
 TEST_CASE("edge: very short expiry (T=0.01)", "[edge]") {
     // Option is almost at expiry. Payoff is approximately max(S0 - K, 0).
     const double T_short = 0.01;
-    const double S0_atm  = 100.0;
+    const double S0_atm = 100.0;
     GeometricBrownianMotion gbm_short{MU, SIGMA, S0_atm};
 
     auto payoff = std::make_shared<EuropeanCall>(K);
     auto fn = make_plain_mc_sampler(gbm_short, EM, payoff, STEPS, T_short);
 
     auto [mean, var] = sample_stats(fn, 50'000, detail::make_seed(800, 0));
-    const double se  = std::sqrt(var / 50'000.0);
+    const double se = std::sqrt(var / 50'000.0);
     const double true_price = ref::undiscounted_call(S0_atm, K, MU, SIGMA, T_short);
 
     INFO("Short expiry T=0.01: mean=" << mean << " true=" << true_price << " se=" << se);
@@ -1070,7 +1092,7 @@ TEST_CASE("edge: very long expiry (T=10)", "[edge]") {
     auto fn = make_plain_mc_sampler(gbm_long, EM, payoff, STEPS, T_long);
 
     auto [mean, var] = sample_stats(fn, 50'000, detail::make_seed(900, 0));
-    const double se  = std::sqrt(var / 50'000.0);
+    const double se = std::sqrt(var / 50'000.0);
     const double true_price = ref::undiscounted_call(S0, K, MU, SIGMA, T_long);
 
     INFO("Long expiry T=10: mean=" << mean << " true=" << true_price << " se=" << se);
@@ -1082,8 +1104,8 @@ TEST_CASE("edge: zero volatility (sigma=0)", "[edge]") {
     // With sigma=0, S_T = S0 * exp(mu*T) deterministically.
     // European call = max(S0*exp(mu*T) - K, 0)
     const double SIGMA_ZERO = 0.0;
-    const double S_T        = S0 * std::exp(MU * T);
-    const double expected   = std::max(S_T - K, 0.0);
+    const double S_T = S0 * std::exp(MU * T);
+    const double expected = std::max(S_T - K, 0.0);
 
     GeometricBrownianMotion gbm_zero{MU, SIGMA_ZERO, S0};
     auto payoff = std::make_shared<EuropeanCall>(K);
@@ -1101,9 +1123,8 @@ TEST_CASE("edge: zero volatility (sigma=0)", "[edge]") {
     auto fn = make_plain_mc_sampler(gbm_zero, EM, payoff, STEPS, T);
     auto [mean, var] = sample_stats(fn, 1'000, detail::make_seed(1000, 0));
 
-    INFO("Zero-vol MC mean = " << mean << "  expected = " << expected
-         << "  sample_var = " << var);
-    REQUIRE(var < 1e-20); // zero variance - deterministic payoff
+    INFO("Zero-vol MC mean = " << mean << "  expected = " << expected << "  sample_var = " << var);
+    REQUIRE(var < 1e-20);                          // zero variance - deterministic payoff
     REQUIRE_THAT(mean, WithinAbs(expected, 0.05)); // small Euler discretization error OK
 }
 
@@ -1116,7 +1137,7 @@ TEST_CASE("edge: high volatility (sigma=0.8)", "[edge]") {
 
     const double true_price = ref::undiscounted_call(S0, K, MU, SIGMA_HIGH, T);
     auto [mean, var] = sample_stats(fn, 100'000, detail::make_seed(1100, 0));
-    const double se  = std::sqrt(var / 100'000.0);
+    const double se = std::sqrt(var / 100'000.0);
 
     INFO("High vol sigma=0.8: mean=" << mean << " true=" << true_price << " 5*se=" << 5.0 * se);
     REQUIRE(mean > 0.0);
@@ -1136,7 +1157,7 @@ TEST_CASE("edge: zero interest rate (mu=0)", "[edge]") {
     // Undiscounted E[call] = BS(r=0) * exp(0) = BS(r=0)
     const double true_price = ref::undiscounted_call(S0, K, MU_ZERO, SIGMA, T);
     auto [mean, var] = sample_stats(fn, 100'000, detail::make_seed(1200, 0));
-    const double se  = std::sqrt(var / 100'000.0);
+    const double se = std::sqrt(var / 100'000.0);
 
     INFO("Zero rate mu=0: mean=" << mean << " true=" << true_price << " 5*se=" << 5.0 * se);
     REQUIRE(mean > 0.0);
@@ -1152,10 +1173,9 @@ TEST_CASE("edge: negative rate (mu=-0.03)", "[edge]") {
 
     const double true_price = ref::undiscounted_call(S0, K, MU_NEG, SIGMA, T);
     auto [mean, var] = sample_stats(fn, 100'000, detail::make_seed(1300, 0));
-    const double se  = std::sqrt(var / 100'000.0);
+    const double se = std::sqrt(var / 100'000.0);
 
-    INFO("Negative rate mu=-0.03: mean=" << mean << " true=" << true_price
-         << " 5*se=" << 5.0 * se);
+    INFO("Negative rate mu=-0.03: mean=" << mean << " true=" << true_price << " 5*se=" << 5.0 * se);
     REQUIRE(mean >= 0.0);
     REQUIRE(std::abs(mean - true_price) < 5.0 * se);
 }
@@ -1178,7 +1198,7 @@ TEST_CASE("edge: single time step (steps=1)", "[edge]") {
 
     const double true_price = ref::undiscounted_call(S0, K, MU, SIGMA, T);
     auto [mean, var] = sample_stats(fn, 200'000, detail::make_seed(1400, 0));
-    const double se  = std::sqrt(var / 200'000.0);
+    const double se = std::sqrt(var / 200'000.0);
 
     INFO("Single step (Euler bias test):");
     INFO("  MC mean   = " << mean);
@@ -1222,7 +1242,7 @@ TEST_CASE("edge: down-and-in put with barrier above S0 is always active", "[edge
     // So this behaves like a vanilla put
     const double BARRIER_HIGH = 150.0;
     auto vanilla_put = std::make_shared<EuropeanPut>(K);
-    auto din_put     = std::make_shared<DownAndInPut>(K, BARRIER_HIGH);
+    auto din_put = std::make_shared<DownAndInPut>(K, BARRIER_HIGH);
 
     auto fn_v = make_plain_mc_sampler(GBM, EM, vanilla_put, STEPS, T);
     auto fn_d = make_plain_mc_sampler(GBM, EM, din_put, STEPS, T);
@@ -1246,7 +1266,7 @@ TEST_CASE("edge: lookback payoffs are non-negative always", "[edge]") {
     // LookbackCall: S_T - min(path) >= 0 always (min <= S_T by construction)
     // LookbackPut:  max(path) - S_T >= 0 always
     auto lc_fn = make_plain_mc_sampler(GBM, EM, std::make_shared<LookbackCall>(), STEPS, T);
-    auto lp_fn = make_plain_mc_sampler(GBM, EM, std::make_shared<LookbackPut>(),  STEPS, T);
+    auto lp_fn = make_plain_mc_sampler(GBM, EM, std::make_shared<LookbackPut>(), STEPS, T);
 
     constexpr size_t N = 5'000;
     auto lc_s = lc_fn(N, detail::make_seed(1700, 0));
@@ -1261,12 +1281,12 @@ TEST_CASE("edge: lookback payoffs are non-negative always", "[edge]") {
 TEST_CASE("edge: importance sampling with theta=0 equals plain MC", "[edge]") {
     // theta=0 means no tilting → identical to plain MC in distribution
     auto payoff = std::make_shared<EuropeanCall>(K);
-    auto plain  = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
-    auto is0    = make_importance_sampler(GBM, EM, payoff, STEPS, T, 0.0);
+    auto plain = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
+    auto is0 = make_importance_sampler(GBM, EM, payoff, STEPS, T, 0.0);
 
     constexpr size_t N = 100'000;
     auto [pm, pv] = sample_stats(plain, N, detail::make_seed(1800, 0));
-    auto [im, iv] = sample_stats(is0,   N, detail::make_seed(1800, 0));
+    auto [im, iv] = sample_stats(is0, N, detail::make_seed(1800, 0));
 
     // Same seed, theta=0: weight = exp(0) = 1 for all paths → identical outputs
     INFO("plain mean=" << pm << " IS(theta=0) mean=" << im);
@@ -1297,9 +1317,9 @@ TEST_CASE("thread: concurrent Engine::run calls produce valid results", "[thread
         GBM, EM, CTRL_MEAN, STEPS, T};
 
     IterativeEngineConfig cfg;
-    cfg.n_compete          = 4;
-    cfg.n_exploit          = 4;
-    cfg.n_rounds           = 3;
+    cfg.n_compete = 4;
+    cfg.n_exploit = 4;
+    cfg.n_rounds = 3;
     cfg.samples_per_thread = 500;
 
     std::vector<double> results(N_THREADS);
@@ -1313,7 +1333,8 @@ TEST_CASE("thread: concurrent Engine::run calls produce valid results", "[thread
             results[t] = res->estimate;
         });
     }
-    for (auto& th : threads) th.join();
+    for (auto& th : threads)
+        th.join();
 
     // All results must be finite, positive, and in a reasonable price range
     for (size_t t = 0; t < N_THREADS; ++t) {
@@ -1345,7 +1366,8 @@ TEST_CASE("thread: concurrent ASVR runs produce valid independent results", "[th
             results[t] = res.estimate;
         });
     }
-    for (auto& th : threads) th.join();
+    for (auto& th : threads)
+        th.join();
 
     for (size_t t = 0; t < N_THREADS; ++t) {
         INFO("ASVR thread " << t << " estimate: " << results[t]);
@@ -1384,15 +1406,17 @@ TEST_CASE("numerics: halton sequence stays in (0,1) and has low discrepancy", "[
 
     // Low-discrepancy: partition (0,1) into 10 bins, each should have ~10 points
     std::vector<int> bins(10, 0);
-    for (double v : h) bins[static_cast<int>(v * 10)]++;
+    for (double v : h)
+        bins[static_cast<int>(v * 10)]++;
     for (int b : bins) {
         INFO("Bin count: " << b);
-        REQUIRE(b >= 5);   // no bin should be under-filled
-        REQUIRE(b <= 15);  // no bin should be over-filled
+        REQUIRE(b >= 5);  // no bin should be under-filled
+        REQUIRE(b <= 15); // no bin should be over-filled
     }
 }
 
-TEST_CASE("numerics: make_seed produces distinct values for different (k,phase) pairs", "[numerics]") {
+TEST_CASE("numerics: make_seed produces distinct values for different (k,phase) pairs",
+          "[numerics]") {
     std::vector<uint64_t> seeds;
     for (size_t k = 0; k < 10; ++k)
         for (size_t phase = 0; phase < 3; ++phase)
@@ -1448,9 +1472,9 @@ TEST_CASE("bench: wall-clock time per strategy at varying sample counts", "[benc
         row.resize(28, ' ');
         for (size_t N : {10'000u, 50'000u, 100'000u}) {
             using clock = std::chrono::high_resolution_clock;
-            auto t0   = clock::now();
+            auto t0 = clock::now();
             auto samp = s.sampler(N, SEED);
-            auto t1   = clock::now();
+            auto t1 = clock::now();
             (void)samp;
             const double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
             row += "  N=" + std::to_string(N) + " " + std::to_string(ms).substr(0, 6) + "ms";
@@ -1462,16 +1486,16 @@ TEST_CASE("bench: wall-clock time per strategy at varying sample counts", "[benc
 }
 
 TEST_CASE("bench: ASVR overhead vs best fixed strategy", "[bench][slow]") {
-    constexpr size_t N     = 100'000;
-    constexpr size_t RUNS  = 20;
+    constexpr size_t N = 100'000;
+    constexpr size_t RUNS = 20;
 
     auto payoff = std::make_shared<EuropeanCall>(K);
 
     // Reference value
     auto plain_ref_fn = make_plain_mc_sampler(GBM, EM, payoff, STEPS, T);
     auto ref_s = plain_ref_fn(500'000, detail::make_seed(0, 999));
-    const double ref = std::accumulate(ref_s.begin(), ref_s.end(), 0.0) /
-                       static_cast<double>(ref_s.size());
+    const double ref =
+        std::accumulate(ref_s.begin(), ref_s.end(), 0.0) / static_cast<double>(ref_s.size());
 
     // Best fixed strategy (antithetic) MSE
     auto anti_fn = make_antithetic_sampler(GBM, EM, payoff, STEPS, T);
@@ -1501,7 +1525,7 @@ TEST_CASE("bench: ASVR overhead vs best fixed strategy", "[bench][slow]") {
     WARN("  Best fixed (antithetic) MSE: " << mse_anti);
     WARN("  ASVR MSE:                    " << mse_asvr);
     WARN("  ASVR overhead ratio:         " << mse_asvr / mse_anti
-         << "  (1.0 = no overhead, <1 = ASVR wins)");
+                                           << "  (1.0 = no overhead, <1 = ASVR wins)");
 
     // ASVR should achieve MSE at most 2x worse than the best fixed strategy
     // (The 10% exploration overhead is the cost of learning)
