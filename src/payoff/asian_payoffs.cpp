@@ -20,8 +20,7 @@ AsianCall::generate_payoffs(const std::vector<Path>& paths) const {
         if (path.empty())
             return std::unexpected("Empty path encountered in AsianCall");
 
-        double mean =
-            std::reduce(path.begin(), path.end(), 0.0) / static_cast<double>(path.size());
+        double mean = std::reduce(path.begin(), path.end(), 0.0) / static_cast<double>(path.size());
         payoffs.push_back(std::max(mean - strike_, 0.0));
     }
 
@@ -39,8 +38,7 @@ AsianPut::generate_payoffs(const std::vector<Path>& paths) const {
         if (path.empty())
             return std::unexpected("Empty path encountered in AsianPut");
 
-        double mean =
-            std::reduce(path.begin(), path.end(), 0.0) / static_cast<double>(path.size());
+        double mean = std::reduce(path.begin(), path.end(), 0.0) / static_cast<double>(path.size());
         payoffs.push_back(std::max(strike_ - mean, 0.0));
     }
 

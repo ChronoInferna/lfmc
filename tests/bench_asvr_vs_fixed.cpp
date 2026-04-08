@@ -24,12 +24,12 @@
 
 using namespace lfmc;
 
-static constexpr double S0     = 100.0;
-static constexpr double MU     = 0.05;
-static constexpr double SIGMA  = 0.2;
-static constexpr double K      = 100.0;
-static constexpr double T      = 1.0;
-static constexpr size_t STEPS  = 52;
+static constexpr double S0 = 100.0;
+static constexpr double MU = 0.05;
+static constexpr double SIGMA = 0.2;
+static constexpr double K = 100.0;
+static constexpr double T = 1.0;
+static constexpr size_t STEPS = 52;
 static const double CONTROL_MEAN = S0 * std::exp(MU * T);
 
 static GeometricBrownianMotion GBM{MU, SIGMA, S0};
@@ -43,8 +43,8 @@ struct BenchResult {
     double std_error_of_mean;
 };
 
-BenchResult bench_fixed(const std::string& name, SamplerFn sampler,
-                        double ref_mean, size_t N, size_t RUNS) {
+BenchResult bench_fixed(const std::string& name, SamplerFn sampler, double ref_mean, size_t N,
+                        size_t RUNS) {
     std::vector<double> errors;
     errors.reserve(RUNS);
     double sum_est = 0.0;
@@ -60,13 +60,15 @@ BenchResult bench_fixed(const std::string& name, SamplerFn sampler,
     // std error of the MSE estimate (rough)
     double mean_err2 = mse;
     double sq_sum = 0.0;
-    for (double e2 : errors) { double d = e2 - mean_err2; sq_sum += d*d; }
-    double sem = std::sqrt(sq_sum / static_cast<double>(RUNS * (RUNS-1)));
+    for (double e2 : errors) {
+        double d = e2 - mean_err2;
+        sq_sum += d * d;
+    }
+    double sem = std::sqrt(sq_sum / static_cast<double>(RUNS * (RUNS - 1)));
     return {name, mse, sum_est / RUNS, sem};
 }
 
-BenchResult bench_asvr(std::shared_ptr<Payoff> payoff, double ref_mean,
-                        size_t N, size_t RUNS) {
+BenchResult bench_asvr(std::shared_ptr<Payoff> payoff, double ref_mean, size_t N, size_t RUNS) {
     std::vector<double> errors;
     errors.reserve(RUNS);
     double sum_est = 0.0;
@@ -83,20 +85,23 @@ BenchResult bench_asvr(std::shared_ptr<Payoff> payoff, double ref_mean,
     double mse = std::accumulate(errors.begin(), errors.end(), 0.0) / static_cast<double>(RUNS);
     double mean_err2 = mse;
     double sq_sum = 0.0;
-    for (double e2 : errors) { double d = e2 - mean_err2; sq_sum += d*d; }
-    double sem = std::sqrt(sq_sum / static_cast<double>(RUNS * (RUNS-1)));
+    for (double e2 : errors) {
+        double d = e2 - mean_err2;
+        sq_sum += d * d;
+    }
+    double sem = std::sqrt(sq_sum / static_cast<double>(RUNS * (RUNS - 1)));
     return {"ASVR", mse, sum_est / RUNS, sem};
 }
 
-void run_option_bench(const std::string& opt_name, std::shared_ptr<Payoff> payoff,
-                       size_t N, size_t RUNS) {
+void run_option_bench(const std::string& opt_name, std::shared_ptr<Payoff> payoff, size_t N,
+                      size_t RUNS) {
     printf("\n=== %-35s (N=%zu, runs=%zu) ===\n", opt_name.c_str(), N, RUNS);
 
     // Reference from 500k plain MC samples
     auto plain_ref_fn = make_plain_mc_sampler(GBM, EULER, payoff, STEPS, T);
     auto ref_samples = plain_ref_fn(500'000, detail::make_seed(0, 99));
-    double ref_mean = std::accumulate(ref_samples.begin(), ref_samples.end(), 0.0)
-                      / static_cast<double>(ref_samples.size());
+    double ref_mean = std::accumulate(ref_samples.begin(), ref_samples.end(), 0.0) /
+                      static_cast<double>(ref_samples.size());
     printf("  Reference mean: %.6f\n", ref_mean);
 
     auto strategies = build_all_strategies(GBM, EULER, payoff, CONTROL_MEAN, STEPS, T);
@@ -111,47 +116,49 @@ void run_option_bench(const std::string& opt_name, std::shared_ptr<Payoff> payof
     results.push_back(bench_asvr(payoff, ref_mean, N, RUNS));
 
     // Sort by MSE ascending
-    std::sort(results.begin(), results.end(),
-              [](const BenchResult& a, const BenchResult& b) {
-                  return a.mean_sq_error < b.mean_sq_error;
-              });
+    std::sort(results.begin(), results.end(), [](const BenchResult& a, const BenchResult& b) {
+        return a.mean_sq_error < b.mean_sq_error;
+    });
 
     double plain_mse = 0.0;
-    for (auto& r : results) if (r.name == "plain_mc") plain_mse = r.mean_sq_error;
+    for (auto& r : results)
+        if (r.name == "plain_mc")
+            plain_mse = r.mean_sq_error;
 
     printf("  %-28s  %12s  %8s  %8s\n", "Strategy", "MSE", "vs PlainMC", "vs ASVR");
-    printf("  %-28s  %12s  %8s  %8s\n",
-           std::string(28,'-').c_str(), std::string(12,'-').c_str(),
-           std::string(8,'-').c_str(), std::string(8,'-').c_str());
+    printf("  %-28s  %12s  %8s  %8s\n", std::string(28, '-').c_str(), std::string(12, '-').c_str(),
+           std::string(8, '-').c_str(), std::string(8, '-').c_str());
 
     double asvr_mse = 0.0;
-    for (auto& r : results) if (r.name == "ASVR") asvr_mse = r.mean_sq_error;
+    for (auto& r : results)
+        if (r.name == "ASVR")
+            asvr_mse = r.mean_sq_error;
 
     for (auto& r : results) {
         double vs_plain = plain_mse / r.mean_sq_error;
-        double vs_asvr  = asvr_mse  / r.mean_sq_error;
-        printf("  %-28s  %12.6f  %8.3fx  %8.3fx\n",
-               r.name.c_str(), r.mean_sq_error, vs_plain, vs_asvr);
+        double vs_asvr = asvr_mse / r.mean_sq_error;
+        printf("  %-28s  %12.6f  %8.3fx  %8.3fx\n", r.name.c_str(), r.mean_sq_error, vs_plain,
+               vs_asvr);
     }
 }
 
 int main() {
-    const size_t N    = 10'000;  // sample budget per trial
-    const size_t RUNS = 200;     // trials for MSE estimate
+    const size_t N = 10'000; // sample budget per trial
+    const size_t RUNS = 200; // trials for MSE estimate
 
     printf("ASVR vs Fixed Strategy Benchmark\n");
     printf("=================================\n");
     printf("Budget N=%zu per trial, %zu independent runs\n", N, RUNS);
     printf("Strategies compared: all 10 fixed + ASVR (adaptive)\n");
 
-    run_option_bench("European Call",           std::make_shared<EuropeanCall>(K),           N, RUNS);
-    run_option_bench("European Put",            std::make_shared<EuropeanPut>(K),            N, RUNS);
-    run_option_bench("Asian Call",              std::make_shared<AsianCall>(K),              N, RUNS);
-    run_option_bench("Asian Put",               std::make_shared<AsianPut>(K),               N, RUNS);
-    run_option_bench("Up-And-Out Call B=130",   std::make_shared<UpAndOutCall>(K, 130.0),    N, RUNS);
-    run_option_bench("Down-And-In Put B=70",    std::make_shared<DownAndInPut>(K, 70.0),     N, RUNS);
-    run_option_bench("Lookback Call",           std::make_shared<LookbackCall>(),            N, RUNS);
-    run_option_bench("Lookback Put",            std::make_shared<LookbackPut>(),             N, RUNS);
+    run_option_bench("European Call", std::make_shared<EuropeanCall>(K), N, RUNS);
+    run_option_bench("European Put", std::make_shared<EuropeanPut>(K), N, RUNS);
+    run_option_bench("Asian Call", std::make_shared<AsianCall>(K), N, RUNS);
+    run_option_bench("Asian Put", std::make_shared<AsianPut>(K), N, RUNS);
+    run_option_bench("Up-And-Out Call B=130", std::make_shared<UpAndOutCall>(K, 130.0), N, RUNS);
+    run_option_bench("Down-And-In Put B=70", std::make_shared<DownAndInPut>(K, 70.0), N, RUNS);
+    run_option_bench("Lookback Call", std::make_shared<LookbackCall>(), N, RUNS);
+    run_option_bench("Lookback Put", std::make_shared<LookbackPut>(), N, RUNS);
 
     printf("\nDone.\n");
     return 0;

@@ -35,11 +35,11 @@ static double bs_call(double S, double K, double r, double sigma, double T) {
 //
 // The Black-Scholes discounted price is NOT the right comparison target here.
 
-static constexpr double S0    = 100.0;
-static constexpr double MU    = 0.05;
+static constexpr double S0 = 100.0;
+static constexpr double MU = 0.05;
 static constexpr double SIGMA = 0.2;
-static constexpr double K     = 100.0;
-static constexpr double T     = 1.0;
+static constexpr double K = 100.0;
+static constexpr double T = 1.0;
 static constexpr size_t STEPS = 52; // weekly steps
 // control: E[S_T] = S0 * exp(mu*T)
 static const double CONTROL_MEAN = S0 * std::exp(MU * T);
@@ -60,12 +60,11 @@ static std::vector<NamedStrategy> build_strategies() {
         // for GBM), E[S_T] = S0 * exp(mu*T)
         {"control_variate",
          make_control_variate_sampler(gbm, euler, std::make_shared<EuropeanCall>(K),
-                                       std::make_shared<EuropeanCall>(0.0), CONTROL_MEAN, STEPS,
-                                       T)},
+                                      std::make_shared<EuropeanCall>(0.0), CONTROL_MEAN, STEPS, T)},
 
         {"antithetic_cv",
          make_antithetic_cv_sampler(gbm, euler, std::make_shared<EuropeanCall>(K),
-                                     std::make_shared<EuropeanCall>(0.0), CONTROL_MEAN, STEPS, T)},
+                                    std::make_shared<EuropeanCall>(0.0), CONTROL_MEAN, STEPS, T)},
     };
 }
 
@@ -136,8 +135,8 @@ TEST_CASE("ASVR: exploration identifies a VR strategy as best") {
 
     // Find which strategy got the highest weight
     const auto& weights = result.precision_weights;
-    const size_t best_k = static_cast<size_t>(
-        std::max_element(weights.begin(), weights.end()) - weights.begin());
+    const size_t best_k =
+        static_cast<size_t>(std::max_element(weights.begin(), weights.end()) - weights.begin());
 
     INFO("Best strategy: " << result.exploration_stats[best_k].name);
     INFO("Weights: ");
