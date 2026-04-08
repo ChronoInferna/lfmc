@@ -1,0 +1,60 @@
+Filters: ~[slow] ~[bench]
+Randomness seeded to: 1253659243
+
+=== Arithmetic Asian Call (truth = 500k MC reference) ===
+   Samples      Estimate         Truth      AbsError    Time(ms)
+----------------------------------------------------------------
+      1000        6.0907        6.0737        0.0170         456
+      5000        6.0907        6.0737        0.0170         464
+     10000        6.0907        6.0737        0.0170         454
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.exe is a Catch2 v3.11.0 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Engine: estimate is within reasonable range of Black-Scholes
+-------------------------------------------------------------------------------
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:39
+...............................................................................
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:44: warning:
+  Estimate: 11.0089 ± 0.0205491
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:45: warning:
+  Leader:   antithetic_cv
+
+
+=== European Call (BS sanity check, undiscounted) ===
+   Samples      Estimate         Truth      AbsError    Time(ms)
+----------------------------------------------------------------
+      1000       10.9031       10.9864        0.0833         368
+      5000       10.9031       10.9864        0.0833         368
+     10000       10.9031       10.9864        0.0833         369
+-------------------------------------------------------------------------------
+Engine: leader stabilises over rounds
+-------------------------------------------------------------------------------
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:133
+...............................................................................
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:151: warning:
+  Leader per round:
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:153: warning:
+    Round 1: antithetic_cv
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:153: warning:
+    Round 2: antithetic_cv
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:153: warning:
+    Round 3: antithetic_cv
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:153: warning:
+    Round 4: antithetic_cv
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:153: warning:
+    Round 5: antithetic_cv
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:153: warning:
+    Round 6: antithetic_cv
+

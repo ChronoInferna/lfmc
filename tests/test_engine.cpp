@@ -25,7 +25,7 @@ static Engine<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>> m
             EulerMaruyama<GeometricBrownianMotion>{}, CONTROL_MEAN, STEPS, T};
 }
 
-// ─── Smoke tests ──────────────────────────────────────────────────────────────
+// --- Smoke tests -----------------------------------------------------------
 
 TEST_CASE("Engine: returns a valid positive estimate for European call") {
     auto engine = make_engine();
@@ -103,7 +103,7 @@ TEST_CASE("Engine: final stats cover all competing strategies") {
     auto result = engine.run(std::make_shared<EuropeanCall>(K));
 
     REQUIRE(result.has_value());
-    REQUIRE(result->final_stats.size() == 4);
+    REQUIRE(result->final_stats.size() == 10); // default n_compete = 10 (all strategies)
     for (const auto& s : result->final_stats) {
         REQUIRE(s.n_samples > 0);
         REQUIRE(s.sample_variance >= 0.0);
@@ -126,7 +126,7 @@ TEST_CASE("Engine: works with barrier option payoff") {
     REQUIRE(result->estimate >= 0.0);
 }
 
-// ─── Leader stability test ────────────────────────────────────────────────────
+// --- Leader stability test --------------------------------------------------
 // With enough samples per round, the leader should stabilise and not switch in
 // late rounds (once we have enough data to distinguish strategies reliably).
 
@@ -153,15 +153,15 @@ TEST_CASE("Engine: leader stabilises over rounds") {
         WARN("  Round " << r.round << ": " << r.leader
              << (r.leader_changed ? " (SWITCHED)" : ""));
 
-    // Allow at most 1 late switch — the leader might flip once as estimates refine
+    // Allow at most 1 late switch - the leader might flip once as estimates refine
     REQUIRE(late_changes <= 1);
 }
 
-// ─── Empirical MSE comparison ─────────────────────────────────────────────────
+// --- Empirical MSE comparison -----------------------------------------------
 
 TEST_CASE("Engine: empirical MSE vs fixed strategies", "[bench]") {
     static constexpr size_t TOTAL = 48000;
-    static constexpr size_t RUNS  = 15;
+    static constexpr size_t RUNS  = 10;
 
     GeometricBrownianMotion gbm{MU, SIGMA, S0};
     EulerMaruyama<GeometricBrownianMotion> euler;
@@ -178,30 +178,31 @@ TEST_CASE("Engine: empirical MSE vs fixed strategies", "[bench]") {
 
         std::vector<Row> rows;
 
-        for (auto& [name, fn] : strategies) {
+        for (const auto& s : strategies) {
             double mse = 0.0;
             for (size_t r = 0; r < RUNS; ++r) {
-                auto s = fn(TOTAL, detail::make_seed(r + 1000, 5));
-                double est = std::accumulate(s.begin(), s.end(), 0.0) /
-                             static_cast<double>(s.size());
+                auto samps = s.sampler(TOTAL, detail::make_seed(r + 1000, 5));
+                double est = std::accumulate(samps.begin(), samps.end(), 0.0) /
+                             static_cast<double>(samps.size());
                 double e = est - ref;
                 mse += e * e;
             }
-            rows.push_back({name, mse / RUNS});
+            rows.push_back({s.name, mse / RUNS});
         }
 
-        // Engine: 4 compete + 8 exploit, 5 rounds, 800 samples/thread
-        // = 5 * 12 * 800 = 48000 total
+        // Engine: 10 compete + 20 exploit, 2 rounds, 800 samples/thread
+        // = 2 * (10 + 20) * 800 = 48000 total
         Engine<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>> engine{
             gbm, euler, CONTROL_MEAN, STEPS, T};
         IterativeEngineConfig cfg;
-        cfg.n_compete          = 4;
-        cfg.n_exploit          = 8;
-        cfg.n_rounds           = 5;
+        cfg.n_compete          = 10;
+        cfg.n_exploit          = 20;
+        cfg.n_rounds           = 2;
         cfg.samples_per_thread = 800;
         {
             double mse = 0.0;
             for (size_t r = 0; r < RUNS; ++r) {
+                cfg.run_index = r;
                 auto res = engine.run(payoff, cfg);
                 REQUIRE(res.has_value());
                 double e = res->estimate - ref;

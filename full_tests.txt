@@ -1,0 +1,33 @@
+RNG seed: 3869861725
+
+=== Arithmetic Asian Call (truth = 500k MC reference) ===
+   Samples      Estimate         Truth      AbsError    Time(ms)
+----------------------------------------------------------------
+      1000        6.0907        6.0737        0.0170         382
+      5000        6.0907        6.0737        0.0170         390
+     10000        6.0907        6.0737        0.0170         382
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1500: warning: 'Overhead test: N=100000 RUNS=20'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1501: warning: '  Best fixed (antithetic) MSE: 0.000757173'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1502: warning: '  ASVR MSE:                    0.000552082'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1503: warning: '  ASVR overhead ratio:         0.729136  (1.0 = no overhead, <1 = ASVR wins)'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1442: warning: 'Strategy timing (N=10000, 50000, 100000):'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1443: warning: '----------------------------------------------------------------------'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  plain_mc                    N=10000 81.943ms  N=50000 400.31ms  N=100000 830.69ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  antithetic                  N=10000 90.626ms  N=50000 459.55ms  N=100000 942.02ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  control_variate             N=10000 82.953ms  N=50000 429.83ms  N=100000 875.90ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  antithetic_cv               N=10000 105.76ms  N=50000 526.11ms  N=100000 1031.1ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  stratified                  N=10000 82.301ms  N=50000 415.10ms  N=100000 812.23ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  halton_qmc                  N=10000 29.677ms  N=50000 150.85ms  N=100000 338.34ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  importance_sampling         N=10000 80.563ms  N=50000 406.16ms  N=100000 811.65ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  moment_matching             N=10000 91.796ms  N=50000 437.48ms  N=100000 876.92ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  lhs                         N=10000 90.173ms  N=50000 441.99ms  N=100000 901.70ms'
+C:/Users/xande/lfmc/lfmc/tests/test_comprehensive.cpp:1458: warning: '  stratified_antithetic       N=10000 91.502ms  N=50000 453.87ms  N=100000 936.27ms'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:122: warning: 'IS theta sensitivity (ATM, sigma=0.2, T=1, N=50000):'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:123: warning: '  theta   | call VR  | put VR'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:124: warning: '  --------+----------+---------'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:139: warning: '  -0.5  |  0.290814  |  2.91959'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:139: warning: '  -0.25  |  0.514772  |  1.72809'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:139: warning: '  0  |  0.984452  |  0.997832'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:139: warning: '  0.25  |  1.80016  |  0.574491'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:139: warning: '  0.5  |  3.25256  |  0.304076'
+C:/Users/xande/lfmc/lfmc/tests/test_strategies.cpp:139: warning: '  1  |  8.66483  |  0.0751764'

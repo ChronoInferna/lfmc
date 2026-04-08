@@ -1,0 +1,100 @@
+Randomness seeded to: 2448772562
+
+=== Up-and-Out Barrier Call ===
+   Samples      Estimate         Truth      AbsError    Time(ms)
+----------------------------------------------------------------
+      1000        1.3267        1.3956        0.0690         486
+      5000        1.3267        1.3956        0.0690         400
+     10000        1.3267        1.3956        0.0690         500
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.exe is a Catch2 v3.11.0 host application.
+Run with -? for options
+
+-------------------------------------------------------------------------------
+Engine: empirical MSE vs fixed strategies
+-------------------------------------------------------------------------------
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:162
+...............................................................................
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:218: warning:
+  European Call  (ref=10.9838, budget=48000, runs=10)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    antithetic_cv: MSE=0.000277667  (15.1542x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    [Engine]: MSE=0.000456974  (9.20801x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    lhs: MSE=0.000710363  (5.92348x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    control_variate: MSE=0.000712115  (5.90891x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    halton_qmc: MSE=0.000730757  (5.75817x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    moment_matching: MSE=0.000951852  (4.42067x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    antithetic: MSE=0.00102122  (4.1204x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    importance_sampling: MSE=0.00140058  (3.00435x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    stratified_antithetic: MSE=0.00366063  (1.14948x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    stratified: MSE=0.00380131  (1.10694x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    plain_mc: MSE=0.00420782  (1x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:218: warning:
+  Asian Call  (ref=6.02849, budget=48000, runs=10)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    halton_qmc: MSE=7.09663e-05  (9.36111x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    antithetic_cv: MSE=0.000195139  (3.40437x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    moment_matching: MSE=0.000236488  (2.80912x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    antithetic: MSE=0.000253095  (2.6248x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    lhs: MSE=0.000259755  (2.5575x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    importance_sampling: MSE=0.000332309  (1.99912x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    control_variate: MSE=0.000368638  (1.8021x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    plain_mc: MSE=0.000664324  (1x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    [Engine]: MSE=0.000822749  (0.807444x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    stratified_antithetic: MSE=0.00131946  (0.50348x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:220: warning:
+    stratified: MSE=0.00152889  (0.434513x vs plain_mc)
+
+C:/Users/xande/lfmc/lfmc/tests/test_engine.cpp:225: FAILED:
+  REQUIRE( engine_mse < plain_mse )
+with expansion:
+  0.00082274883135724 < 0.00066432371042179
+
+===============================================================================
+test cases:  7 |  6 passed | 1 failed
+assertions: 40 | 39 passed | 1 failed
+

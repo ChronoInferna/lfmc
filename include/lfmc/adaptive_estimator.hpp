@@ -22,6 +22,21 @@ namespace lfmc {
 // between strategies and between exploration/exploitation phases.
 using SamplerFn = std::function<std::vector<double>(size_t n_samples, uint64_t seed)>;
 
+// --- Strategy type tag ---------------------------------------------------
+// MC:  standard pseudo-random estimator; per-sample variance is the right
+//      precision signal for the bandit.
+// QMC: quasi-random estimator (Halton, Sobol, ...); per-sample variance equals
+//      plain MC's (same payoff distribution) and is therefore useless as a
+//      bandit signal.  The engine uses empirical variance-of-mean instead.
+enum class StrategyType { MC, QMC };
+
+// Named strategy: bundles a sampler with its display name and type tag.
+struct NamedStrategy {
+    std::string  name;
+    SamplerFn    sampler;
+    StrategyType type = StrategyType::MC;
+};
+
 // Per-strategy statistics collected during the exploration phase
 struct StrategyStats {
     std::string name;
@@ -41,7 +56,7 @@ struct ASVRResult {
     std::vector<double> precision_weights;        // w_k* used to allocate exploitation
     std::vector<size_t> exploitation_counts;      // actual n_k samples per strategy
 
-    // Diagnostics — useful for paper tables
+    // Diagnostics - useful for paper tables
     double plain_mc_variance_estimate; // sigma_0^2 / N (first strategy treated as plain MC)
     double variance_reduction_ratio;   // plain_mc_variance / estimated_variance
     size_t n_exploration;
@@ -59,7 +74,7 @@ struct ASVRConfig {
     size_t min_exploration_per_strategy = 100;
 };
 
-// ─── ASVR Algorithm ──────────────────────────────────────────────────────────
+// --- ASVR Algorithm -------------------------------------------------------
 //
 // Phase 1 (Exploration): K strategies run in parallel, each generating
 //   n_explore_each = max(min_per_strategy, alpha*N/K) samples.
@@ -69,7 +84,7 @@ struct ASVRConfig {
 //   (inverse-variance / "precision" weighting)
 //
 // Phase 2 (Exploitation): strategy k receives n_k = floor(w_k* * n_exploit) samples,
-//   each run using seed make_seed(k, 1) — independent of the exploration phase.
+//   each run using seed make_seed(k, 1) - independent of the exploration phase.
 //   Strategies with n_k > 0 run in parallel.
 //
 // Combination (unbiased by independence):
@@ -83,7 +98,7 @@ struct ASVRConfig {
 
 class AdaptiveVarianceReduction {
   public:
-    static ASVRResult run(std::vector<std::pair<std::string, SamplerFn>> strategies,
+    static ASVRResult run(std::vector<NamedStrategy> strategies,
                           size_t total_samples, ASVRConfig config = {});
 
     static StrategyStats run_strategy_batch(const std::string& name, const SamplerFn& sampler,
@@ -93,7 +108,7 @@ class AdaptiveVarianceReduction {
     static std::vector<double> compute_precision_weights(const std::vector<StrategyStats>& stats);
 };
 
-// ─── Internal utilities ───────────────────────────────────────────────────────
+// --- Internal utilities ---------------------------------------------------
 
 namespace detail {
 
@@ -161,13 +176,13 @@ inline std::pair<double, double> mean_variance(const std::vector<double>& sample
 
 } // namespace detail
 
-// ─── Strategy factory functions ──────────────────────────────────────────────
+// --- Strategy factory functions -------------------------------------------
 //
 // Each factory captures the pricing parameters and returns a SamplerFn.
 // The SamplerFn is called with (n_samples, seed) and returns exactly n_samples
 // iid draws from the (possibly variance-reduced) estimator of E[payoff].
 
-// Plain pseudo-random Monte Carlo — baseline strategy
+// Plain pseudo-random Monte Carlo - baseline strategy
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_plain_mc_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
                                  size_t steps, double T) {
@@ -186,7 +201,7 @@ SamplerFn make_plain_mc_sampler(SP process, NS scheme, std::shared_ptr<Payoff> p
     };
 }
 
-// Antithetic variates — each sample is (payoff(Z) + payoff(-Z)) / 2
+// Antithetic variates - each sample is (payoff(Z) + payoff(-Z)) / 2
 // Returns n samples, each consuming one pair of paths. Variance is reduced
 // because the two paths are negatively correlated for monotone payoffs.
 template <StochasticProcess SP, NumericalScheme<SP> NS>

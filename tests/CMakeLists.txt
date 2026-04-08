@@ -24,7 +24,8 @@ set(TEST_SOURCES
     test_adaptive.cpp
     test_strategies.cpp
     test_engine.cpp
-    # test_convergency.cpp
+    test_comprehensive.cpp
+    test_convergency.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
@@ -38,6 +39,10 @@ target_link_libraries(bench PRIVATE lfmc)
 add_executable(quick_compare quick_compare.cpp)
 target_link_libraries(quick_compare PRIVATE lfmc)
 add_test(NAME quick_compare COMMAND quick_compare)
+
+# Stability sweep: Engine MSE vs fixed strategies across run counts {15,30,50,100}
+add_executable(stability_sweep stability_sweep.cpp)
+target_link_libraries(stability_sweep PRIVATE lfmc)
 
 # Copy UCRT64 C++ runtime DLLs so the executables find the right runtime on Windows.
 # Without this, Git's bundled MinGW64 DLLs (on PATH earlier) take precedence and
@@ -58,7 +63,8 @@ if(MSYS OR MINGW)
     endforeach()
 endif()
 
-catch_discover_tests(
-    tests
-    ADD_TAGS_AS_LABELS
-)
+# catch_discover_tests(
+#     tests
+#     ADD_TAGS_AS_LABELS
+# )
+add_test(NAME tests COMMAND tests)

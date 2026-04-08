@@ -27,7 +27,7 @@ static const double CONTROL_MEAN = S0 * std::exp(MU * T);
 static GeometricBrownianMotion GBM{MU, SIGMA, S0};
 static EulerMaruyama<GeometricBrownianMotion> EULER;
 
-// Total budget: Engine uses 4*2000 (explore) + 8*5000 (exploit) = 48000 samples.
+// Total budget: Engine uses n_rounds*(n_compete+n_exploit)*spt = 2*30*800 = 48000 samples.
 // Fixed strategies get the same 48000 samples for a fair comparison.
 static constexpr size_t TOTAL = 48000;
 static constexpr size_t RUNS  = 50;
@@ -55,14 +55,16 @@ static double bench_engine(std::shared_ptr<Payoff> payoff, double ref, size_t ru
     Engine<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>> engine{
         GBM, EULER, CONTROL_MEAN, STEPS, T};
 
-    EngineConfig cfg;
-    cfg.n_explore_threads = 4;
-    cfg.explore_samples   = 2000;
-    cfg.n_exploit_threads = 8;
-    cfg.exploit_samples   = 5000;
+    // IterativeEngineConfig: n_rounds*(n_compete+n_exploit)*samples_per_thread = 2*30*800 = 48000
+    IterativeEngineConfig cfg;
+    cfg.n_compete          = 10;
+    cfg.n_exploit          = 20;
+    cfg.n_rounds           = 2;
+    cfg.samples_per_thread = 800;
 
     double mse = 0.0;
     for (size_t r = 0; r < runs; ++r) {
+        cfg.run_index = r;
         auto res = engine.run(payoff, cfg);
         if (!res) continue;
         double e = res->estimate - ref;
@@ -84,10 +86,10 @@ void compare(const char* opt_name, std::shared_ptr<Payoff> payoff) {
     double plain_mse = 0.0;
     std::vector<std::pair<std::string, double>> rows;
 
-    for (auto& [name, fn] : strategies) {
-        double mse = bench_fixed(name, fn, ref, RUNS);
-        rows.push_back({name, mse});
-        if (name == "plain_mc") plain_mse = mse;
+    for (const auto& s : strategies) {
+        double mse = bench_fixed(s.name, s.sampler, ref, RUNS);
+        rows.push_back({s.name, mse});
+        if (s.name == "plain_mc") plain_mse = mse;
     }
 
     double engine_mse = bench_engine(payoff, ref, RUNS);

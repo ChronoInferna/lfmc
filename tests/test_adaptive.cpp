@@ -10,7 +10,7 @@
 
 using namespace lfmc;
 
-// ─── Black-Scholes closed-form price ─────────────────────────────────────────
+// --- Black-Scholes closed-form price ----------------------------------------
 // Used as the ground truth to verify unbiasedness.
 
 static double standard_normal_cdf(double x) {
@@ -23,7 +23,7 @@ static double bs_call(double S, double K, double r, double sigma, double T) {
     return S * standard_normal_cdf(d1) - K * std::exp(-r * T) * standard_normal_cdf(d2);
 }
 
-// ─── Shared test parameters ───────────────────────────────────────────────────
+// --- Shared test parameters -------------------------------------------------
 // ATM European call on GBM: S0=100, K=100, mu=0.05, sigma=0.2, T=1
 //
 // The library computes the UNDISCOUNTED expected payoff E[max(S_T-K,0)].
@@ -45,7 +45,7 @@ static constexpr size_t STEPS = 52; // weekly steps
 static const double CONTROL_MEAN = S0 * std::exp(MU * T);
 
 // Build the standard four-strategy suite
-static std::vector<std::pair<std::string, SamplerFn>> build_strategies() {
+static std::vector<NamedStrategy> build_strategies() {
     GeometricBrownianMotion gbm{MU, SIGMA, S0};
     EulerMaruyama<GeometricBrownianMotion> euler;
 
@@ -69,7 +69,7 @@ static std::vector<std::pair<std::string, SamplerFn>> build_strategies() {
     };
 }
 
-// ─── Tests ────────────────────────────────────────────────────────────────────
+// --- Tests ------------------------------------------------------------------
 
 TEST_CASE("ASVR: estimate is close to undiscounted expected payoff") {
     // ASVR with 20 000 total samples.
@@ -171,7 +171,7 @@ TEST_CASE("ASVR: sample budget splits correctly") {
     REQUIRE(exploit_sum == result.n_exploitation);
 }
 
-// ─── Empirical variance comparison ────────────────────────────────────────────
+// --- Empirical variance comparison ------------------------------------------
 //
 // This test is the paper-quality benchmark: run both ASVR and plain MC many
 // times, compute empirical MSE for each, and verify ASVR MSE < plain MC MSE.
@@ -204,12 +204,12 @@ TEST_CASE("ASVR: empirical MSE lower than plain MC with same sample budget", "[.
     double mse_plain = 0.0;
 
     for (size_t r = 0; r < RUNS; ++r) {
-        // ASVR run — N total samples
+        // ASVR run - N total samples
         auto asvr_res = AdaptiveVarianceReduction::run(build_strategies(), N, cfg);
         double err_asvr = asvr_res.estimate - ref_mean;
         mse_asvr += err_asvr * err_asvr;
 
-        // Plain MC run — same N samples
+        // Plain MC run - same N samples
         auto plain_samples = plain(N, detail::make_seed(r + 10000, 99));
         double plain_mean = 0.0;
         for (double x : plain_samples)

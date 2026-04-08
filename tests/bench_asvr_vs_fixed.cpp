@@ -103,8 +103,8 @@ void run_option_bench(const std::string& opt_name, std::shared_ptr<Payoff> payof
     std::vector<BenchResult> results;
 
     // Benchmark each fixed strategy
-    for (auto& [name, sampler] : strategies) {
-        results.push_back(bench_fixed(name, sampler, ref_mean, N, RUNS));
+    for (const auto& s : strategies) {
+        results.push_back(bench_fixed(s.name, s.sampler, ref_mean, N, RUNS));
     }
 
     // Benchmark ASVR

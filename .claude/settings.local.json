@@ -56,7 +56,9 @@
       "Bash(chmod +x /c/Users/xande/lfmc/lfmc/build-debug/tests/quick_compare.exe)",
       "Bash(bash -c \"./quick_compare.exe\")",
       "Bash(echo exit=$?)",
-      "Bash(winpty /c/Users/xande/lfmc/lfmc/build-debug/tests/quick_compare.exe)"
+      "Bash(winpty /c/Users/xande/lfmc/lfmc/build-debug/tests/quick_compare.exe)",
+      "Bash(cmake --build build-debug --target tests bench quick_compare diagnose)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

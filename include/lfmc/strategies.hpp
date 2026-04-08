@@ -20,7 +20,7 @@
 
 namespace lfmc::detail {
 
-// ─── Acklam's inverse normal CDF ─────────────────────────────────────────────
+// --- Acklam's inverse normal CDF -----------------------------------------------
 // Rational approximation accurate to ~5e-9 over (0, 1).
 // Reference: Peter J. Acklam, "An algorithm for computing the inverse normal
 // cumulative distribution function", 2010.
@@ -53,7 +53,7 @@ inline double normal_icdf(double p) noexcept {
             ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
 }
 
-// ─── Halton radical inverse ───────────────────────────────────────────────────
+// --- Halton radical inverse -----------------------------------------------
 // Returns the i-th term (1-indexed) of the Van der Corput sequence in `base`.
 // Output in (0, 1). Caller must pass i >= 1.
 inline double halton(size_t i, int base) noexcept {
@@ -68,7 +68,7 @@ inline double halton(size_t i, int base) noexcept {
     return result;
 }
 
-// ─── First n primes (sieve of Eratosthenes) ───────────────────────────────────
+// --- First n primes (sieve of Eratosthenes) ---------------------------------
 // Used by Halton QMC: dimension d gets the d-th prime as its base.
 inline std::vector<int> first_n_primes(size_t n) {
     std::vector<int> primes;
@@ -93,7 +93,7 @@ inline std::vector<int> first_n_primes(size_t n) {
 
 namespace lfmc {
 
-// ─── Strategy 5: Stratified sampling ─────────────────────────────────────────
+// --- Strategy 5: Stratified sampling ----------------------------------------
 // Stratifies only the first Brownian increment dimension (the one with highest
 // correlation to the terminal price). Remaining dimensions are pseudo-random.
 // The n strata are [(i/n, (i+1)/n)] for i=0..n-1; one uniform is drawn from
@@ -129,7 +129,7 @@ SamplerFn make_stratified_sampler(SP process, NS scheme, std::shared_ptr<Payoff>
     };
 }
 
-// ─── Strategy 6: Halton QMC with random shift ─────────────────────────────────
+// --- Strategy 6: Halton QMC with random shift -------------------------------
 // Generates a `steps`-dimensional Halton sequence. Each dimension is shifted
 // by a random uniform (derived from the seed) before converting to N(0,1).
 // The random shift randomises the sequence per ASVR phase while preserving
@@ -171,7 +171,7 @@ SamplerFn make_halton_sampler(SP process, NS scheme, std::shared_ptr<Payoff> pay
     };
 }
 
-// ─── Strategy 7: Importance sampling (exponential tilting) ───────────────────
+// --- Strategy 7: Importance sampling (exponential tilting) ---------------------
 // Tilts all normal draws using a TOTAL drift parameter `theta`, distributed
 // evenly as theta/sqrt(steps) per time step. This parameterisation makes theta
 // dimensionally consistent regardless of the number of steps:
@@ -229,7 +229,7 @@ SamplerFn make_importance_sampler(SP process, NS scheme, std::shared_ptr<Payoff>
     };
 }
 
-// ─── Strategy 8: Moment matching ─────────────────────────────────────────────
+// --- Strategy 8: Moment matching -----------------------------------------------
 // Generates all n * steps normals up front (step-major layout for cache
 // efficiency in the rescaling pass), then rescales each time step's n draws
 // to have exact sample mean = 0 and sample std = 1. This eliminates first-
@@ -287,7 +287,7 @@ SamplerFn make_moment_matching_sampler(SP process, NS scheme, std::shared_ptr<Pa
     };
 }
 
-// ─── Strategy 9: Latin Hypercube Sampling ────────────────────────────────────
+// --- Strategy 9: Latin Hypercube Sampling -----------------------------------
 // In each of the `steps` dimensions independently: generates n stratified
 // uniform samples (one per stratum), randomly permutes them (so different
 // dimensions are uncorrelated), then converts to N(0,1) via normal_icdf.
@@ -333,7 +333,7 @@ SamplerFn make_lhs_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff
     };
 }
 
-// ─── Strategy 10: Stratified + Antithetic ────────────────────────────────────
+// --- Strategy 10: Stratified + Antithetic ------------------------------------
 // Combines stratified sampling on the first dimension with antithetic variates.
 // For n requested samples, generates n pairs:
 //   - Stratum i: u_i = (i + U) / n → z_1 = normal_icdf(u_i)
@@ -384,36 +384,39 @@ SamplerFn make_stratified_antithetic_sampler(SP process, NS scheme, std::shared_
     };
 }
 
-// ─── Convenience: build all 10 standard strategies ───────────────────────────
+// --- Convenience: build all 10 standard strategies ----------------------------
 // Assembles the canonical 10-strategy vector for a given payoff on GBM +
 // Euler-Maruyama. The control variate strategies use EuropeanCall(0.0) as the
 // control (= S_T) with control_mean = S0 * exp(mu * T).
 // For path-dependent options where S_T is a poor control, the CV strategies
 // will receive low precision weights from ASVR automatically.
+//
+// halton_qmc is tagged StrategyType::QMC so the iterative engine can use
+// empirical variance-of-mean rather than per-sample variance to weight it.
 template <StochasticProcess SP, NumericalScheme<SP> NS>
-std::vector<std::pair<std::string, SamplerFn>>
+std::vector<NamedStrategy>
 build_all_strategies(SP process, NS scheme, std::shared_ptr<Payoff> payoff, double control_mean,
                      size_t steps, double T, double is_theta = 0.5) {
     // The control payoff is S_T: EuropeanCall(0) gives max(S_T - 0, 0) = S_T for GBM.
     auto control_payoff = []() { return std::make_shared<EuropeanCall>(0.0); };
 
     return {
-        {"plain_mc", make_plain_mc_sampler(process, scheme, payoff, steps, T)},
-        {"antithetic", make_antithetic_sampler(process, scheme, payoff, steps, T)},
-        {"control_variate",
-         make_control_variate_sampler(process, scheme, payoff, control_payoff(), control_mean,
-                                       steps, T)},
-        {"antithetic_cv",
-         make_antithetic_cv_sampler(process, scheme, payoff, control_payoff(), control_mean, steps,
-                                     T)},
-        {"stratified", make_stratified_sampler(process, scheme, payoff, steps, T)},
-        {"halton_qmc", make_halton_sampler(process, scheme, payoff, steps, T)},
-        {"importance_sampling",
-         make_importance_sampler(process, scheme, payoff, steps, T, is_theta)},
-        {"moment_matching", make_moment_matching_sampler(process, scheme, payoff, steps, T)},
-        {"lhs", make_lhs_sampler(process, scheme, payoff, steps, T)},
-        {"stratified_antithetic",
-         make_stratified_antithetic_sampler(process, scheme, payoff, steps, T)},
+        {"plain_mc",              make_plain_mc_sampler(process, scheme, payoff, steps, T)},
+        {"antithetic",            make_antithetic_sampler(process, scheme, payoff, steps, T)},
+        {"control_variate",       make_control_variate_sampler(process, scheme, payoff,
+                                      control_payoff(), control_mean, steps, T)},
+        {"antithetic_cv",         make_antithetic_cv_sampler(process, scheme, payoff,
+                                      control_payoff(), control_mean, steps, T)},
+        {"stratified",            make_stratified_sampler(process, scheme, payoff, steps, T)},
+        // halton_qmc tagged QMC: bandit uses empirical variance-of-mean, not per-sample variance
+        {"halton_qmc",            make_halton_sampler(process, scheme, payoff, steps, T),
+                                  StrategyType::QMC},
+        {"importance_sampling",   make_importance_sampler(process, scheme, payoff, steps, T,
+                                      is_theta)},
+        {"moment_matching",       make_moment_matching_sampler(process, scheme, payoff, steps, T)},
+        {"lhs",                   make_lhs_sampler(process, scheme, payoff, steps, T)},
+        {"stratified_antithetic", make_stratified_antithetic_sampler(process, scheme, payoff,
+                                      steps, T)},
     };
 }
 

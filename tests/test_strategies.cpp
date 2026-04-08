@@ -12,7 +12,7 @@
 
 using namespace lfmc;
 
-// ─── Shared market parameters ─────────────────────────────────────────────────
+// --- Shared market parameters -----------------------------------------------
 // ATM European-style: S0=100, K=100, mu=r=0.05, sigma=0.2, T=1y, 52 steps
 static constexpr double S0       = 100.0;
 static constexpr double MU       = 0.05;
@@ -38,20 +38,20 @@ static std::pair<double, double> stats(const std::vector<double>& v) {
     return {mean, sq / (n - 1.0)};
 }
 
-// ─── Smoke tests: each sampler returns the requested count ────────────────────
+// --- Smoke tests: each sampler returns the requested count -------------------
 
 TEST_CASE("strategies: all 10 samplers return requested sample count") {
     auto payoff = std::make_shared<EuropeanCall>(K);
     auto strategies = build_all_strategies(GBM, EULER, payoff, CONTROL_MEAN, STEPS, T);
 
-    for (const auto& [name, sampler] : strategies) {
-        INFO("Strategy: " << name);
-        auto samples = sampler(100, detail::make_seed(0, 0));
+    for (const auto& s : strategies) {
+        INFO("Strategy: " << s.name);
+        auto samples = s.sampler(100, detail::make_seed(0, 0));
         REQUIRE(samples.size() == 100);
     }
 }
 
-// ─── Unbiasedness: strategies agree on mean ───────────────────────────────────
+// --- Unbiasedness: strategies agree on mean --------------------------------
 
 // Reference mean computed from 200k plain-MC samples (≈ undiscounted E[max(S_T-K,0)])
 static double plain_mc_ref(std::shared_ptr<Payoff> payoff, size_t n = 200'000) {
@@ -67,11 +67,11 @@ TEST_CASE("strategies: all 10 strategies are unbiased for European call") {
     const double ref = plain_mc_ref(payoff);
     auto strategies = build_all_strategies(GBM, EULER, payoff, CONTROL_MEAN, STEPS, T);
 
-    for (const auto& [name, sampler] : strategies) {
-        auto s = sampler(30'000, detail::make_seed(42, 1));
-        auto [mean, var] = stats(s);
-        const double se = std::sqrt(var / s.size());
-        INFO("Strategy: " << name << "  mean=" << mean << "  ref=" << ref << "  5-sigma=" << 5.0 * se);
+    for (const auto& s : strategies) {
+        auto samps = s.sampler(30'000, detail::make_seed(42, 1));
+        auto [mean, var] = stats(samps);
+        const double se = std::sqrt(var / samps.size());
+        INFO("Strategy: " << s.name << "  mean=" << mean << "  ref=" << ref << "  5-sigma=" << 5.0 * se);
         // 5-sigma bound: P(fail) < 0.00006%
         REQUIRE(std::abs(mean - ref) < 5.0 * se);
     }
@@ -94,7 +94,59 @@ TEST_CASE("strategies: importance sampling is unbiased across theta values") {
     }
 }
 
-// ─── Variance reduction: each strategy beats plain MC for European call ────────
+// --- IS theta sensitivity study --------------------------------------------
+// Documents and quantifies how the IS variance-reduction ratio varies with theta
+// for both calls and puts.  theta=0 must recover plain MC (VR≈1).
+//
+// This is intentionally not a pass/fail correctness test for non-zero theta -
+// whether IS helps or hurts depends on the option type and moneyness.  The
+// printed VR ratios are the studiable result for the paper.
+//
+// Observed behaviour (ATM, sigma=0.2, T=1, S0=K=100, 52 steps):
+//   - Call + theta>0: shifts S_T upward into the money → VR>1 (helps)
+//   - Call + theta<0: shifts S_T downward out of the money → VR<1 (hurts)
+//   - Put  + theta<0: shifts S_T downward into the money → VR>1 (helps)
+//   - Put  + theta>0: shifts S_T upward out of the money → VR<1 (hurts)
+
+TEST_CASE("IS: theta sensitivity for call and put - VR ratio study") {
+    static const std::vector<double> thetas = {-0.5, -0.25, 0.0, 0.25, 0.5, 1.0};
+    static constexpr size_t N = 50'000;
+
+    auto plain_call = make_plain_mc_sampler(GBM, EULER, std::make_shared<EuropeanCall>(K), STEPS, T);
+    auto plain_put  = make_plain_mc_sampler(GBM, EULER, std::make_shared<EuropeanPut>(K),  STEPS, T);
+
+    auto [mc_call, var_plain_call] = stats(plain_call(N, detail::make_seed(0, 10)));
+    auto [mc_put,  var_plain_put]  = stats(plain_put(N,  detail::make_seed(0, 11)));
+    (void)mc_call; (void)mc_put;
+
+    WARN("IS theta sensitivity (ATM, sigma=0.2, T=1, N=" << N << "):");
+    WARN("  theta   | call VR  | put VR");
+    WARN("  --------+----------+---------");
+
+    for (double theta : thetas) {
+        auto is_call = make_importance_sampler(GBM, EULER, std::make_shared<EuropeanCall>(K), STEPS, T, theta);
+        auto is_put  = make_importance_sampler(GBM, EULER, std::make_shared<EuropeanPut>(K),  STEPS, T, theta);
+
+        // seed offset: theta * 100 + 200 is always positive for theta in {-0.5 .. 1.0}
+        const auto seed_off = static_cast<size_t>(theta * 100.0 + 200.0);
+        auto [m_call, var_call] = stats(is_call(N, detail::make_seed(1, seed_off)));
+        auto [m_put,  var_put]  = stats(is_put( N, detail::make_seed(2, seed_off + 100)));
+        (void)m_call; (void)m_put;
+
+        const double vr_call = (var_call > 0.0) ? var_plain_call / var_call : 0.0;
+        const double vr_put  = (var_put  > 0.0) ? var_plain_put  / var_put  : 0.0;
+
+        WARN("  " << theta << "  |  " << vr_call << "  |  " << vr_put);
+
+        // theta=0: IS reduces to plain MC (weight=1 always), so VR must be ≈1
+        if (theta == 0.0) {
+            REQUIRE(std::abs(vr_call - 1.0) < 0.15);
+            REQUIRE(std::abs(vr_put  - 1.0) < 0.15);
+        }
+    }
+}
+
+// --- Variance reduction: each strategy beats plain MC for European call ---
 
 // Helper: run both sampler and plain MC for n samples, return var_strategy/var_plain.
 // n should be large enough (>=50k) for strategies with small VR (~2%) to be reliable.
@@ -108,7 +160,7 @@ static double relative_variance(const SamplerFn& strategy, const SamplerFn& plai
 // For European call with 52 steps:
 //   - Antithetic, Halton, stratified-antithetic: large VR (>20%), easily detectable
 //   - Stratified (1st dim), moment-matching, LHS: ~2% VR from 52 dimensions
-//     Noise at n=80k is ~0.5% relative std — too close to detect reliably with REQUIRE <1.0
+//     Noise at n=80k is ~0.5% relative std - too close to detect reliably with REQUIRE <1.0
 //     So we verify these "marginal" strategies don't increase variance (rv < 1.05),
 //     and rely on the ASVR option-type tests to demonstrate aggregate benefit.
 
@@ -160,7 +212,7 @@ TEST_CASE("strategies: stratified antithetic has lower variance than plain MC") 
     REQUIRE(rv < 1.0);
 }
 
-// ─── ASVR over all option types ───────────────────────────────────────────────
+// --- ASVR over all option types -------------------------------------------
 
 static ASVRResult run_asvr_for(std::shared_ptr<Payoff> payoff, size_t n = 20'000) {
     ASVRConfig cfg;
@@ -233,7 +285,7 @@ TEST_CASE("ASVR with 10 strategies: LookbackPut VR ratio > 1") {
     REQUIRE(result.variance_reduction_ratio > 1.0);
 }
 
-// ─── Best strategy differs by option type ────────────────────────────────────
+// --- Best strategy differs by option type ----------------------------------
 // This test captures the paper's central claim: ASVR automatically selects
 // different optimal strategies for fundamentally different option types.
 
@@ -270,7 +322,7 @@ TEST_CASE("ASVR: best strategy for Asian call vs barrier call", "[.slow]") {
     REQUIRE(best_asian != best_barrier);
 }
 
-// ─── Empirical MSE comparison across all option types ─────────────────────────
+// --- Empirical MSE comparison across all option types -----------------------
 // Paper table: for each option type, compare ASVR MSE vs plain MC MSE with
 // the same total sample budget. This is the core empirical contribution.
 

@@ -6,7 +6,7 @@
 
 namespace lfmc {
 
-// ─── run_strategy_batch ───────────────────────────────────────────────────────
+// --- run_strategy_batch ---------------------------------------------------
 // Calls sampler(n_samples, seed), measures wall time, computes mean and
 // unbiased sample variance.
 
@@ -29,7 +29,7 @@ StrategyStats AdaptiveVarianceReduction::run_strategy_batch(const std::string& n
     };
 }
 
-// ─── compute_precision_weights ────────────────────────────────────────────────
+// --- compute_precision_weights -------------------------------------------
 // w_k* = (1 / sigma_k^2) / sum_j (1 / sigma_j^2)
 // This is the inverse-variance (precision) weighting that minimises the variance
 // of a linear combination of independent unbiased estimators.
@@ -48,22 +48,22 @@ AdaptiveVarianceReduction::compute_precision_weights(const std::vector<StrategyS
         for (size_t k = 0; k < stats.size(); ++k)
             weights[k] = precisions[k] / total;
     } else {
-        // Degenerate: all variances are zero — use equal weights
+        // Degenerate: all variances are zero - use equal weights
         std::fill(weights.begin(), weights.end(), 1.0 / static_cast<double>(stats.size()));
     }
     return weights;
 }
 
-// ─── run ──────────────────────────────────────────────────────────────────────
+// --- run ------------------------------------------------------------------
 
-ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, SamplerFn>> strategies,
+ASVRResult AdaptiveVarianceReduction::run(std::vector<NamedStrategy> strategies,
                                            size_t total_samples, ASVRConfig config) {
     const size_t K = strategies.size();
     assert(K >= 1);
 
     const size_t hw = std::max(size_t{1}, config.n_threads);
 
-    // ── Budget split ─────────────────────────────────────────────────────────
+    // -- Budget split -------------------------------------------------------
     const size_t n_explore_each = std::max(
         config.min_exploration_per_strategy,
         static_cast<size_t>(config.exploration_fraction * static_cast<double>(total_samples) /
@@ -72,7 +72,7 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
     const size_t n_exploit =
         (n_explore_total < total_samples) ? total_samples - n_explore_total : 0;
 
-    // ── Phase 1: Parallel exploration ─────────────────────────────────────────
+    // -- Phase 1: Parallel exploration ----------------------------------------
     // Each strategy runs on its own thread with seed make_seed(k, 0).
     // Thread count is capped at min(K, floor(alpha * hw)) so that exploration
     // does not consume more than its "10%" thread share; remaining HW threads
@@ -91,18 +91,18 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
         threads.reserve(wave_end - wave_start);
         for (size_t k = wave_start; k < wave_end; ++k) {
             threads.emplace_back([&, k]() {
-                exploration_stats[k] = run_strategy_batch(strategies[k].first,
-                                                           strategies[k].second, n_explore_each,
+                exploration_stats[k] = run_strategy_batch(strategies[k].name,
+                                                           strategies[k].sampler, n_explore_each,
                                                            detail::make_seed(k, 0));
             });
         }
         // jthreads join on destruction at end of wave block
     }
 
-    // ── Compute precision weights ──────────────────────────────────────────────
+    // -- Compute precision weights ------------------------------------------
     auto weights = compute_precision_weights(exploration_stats);
 
-    // ── Allocate exploitation budget ───────────────────────────────────────────
+    // -- Allocate exploitation budget ----------------------------------------
     // n_k = floor(w_k* * n_exploit); remainder given to the highest-weight strategy
     std::vector<size_t> exploit_counts(K, 0);
     if (n_exploit > 0) {
@@ -120,7 +120,7 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
         }
     }
 
-    // ── Phase 2: Parallel exploitation ────────────────────────────────────────
+    // -- Phase 2: Parallel exploitation ----------------------------------------
     // Remaining (1 - alpha) * hw threads are available; strategies with non-zero
     // allocation run in parallel. Seed make_seed(k, 1) is independent of phase 0.
     const size_t exploit_thread_cap = std::max(size_t{1}, hw);
@@ -139,15 +139,15 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
             for (size_t i = wave_start; i < wave_end; ++i) {
                 const size_t k = active[i];
                 threads.emplace_back([&, k]() {
-                    exploit_stats[k] = run_strategy_batch(strategies[k].first,
-                                                           strategies[k].second, exploit_counts[k],
+                    exploit_stats[k] = run_strategy_batch(strategies[k].name,
+                                                           strategies[k].sampler, exploit_counts[k],
                                                            detail::make_seed(k, 1));
                 });
             }
         }
     }
 
-    // ── Combine ───────────────────────────────────────────────────────────────
+    // -- Combine -------------------------------------------------------
     //
     // The final estimate uses ONLY exploitation samples:
     //
@@ -166,7 +166,7 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
     // Using them would require equal-weight pooling (because precision weights are
     // correlated with the exploration means), and the equal-weight pooled exploration
     // mean adds noise without guaranteeing variance improvement. The exploration
-    // samples are the "cost of learning" — they determine w_k* but do not contribute
+    // samples are the "cost of learning" - they determine w_k* but do not contribute
     // to the final estimate. This makes the overhead explicit and the estimator clean.
 
     double mu_exploit = 0.0;
@@ -182,7 +182,7 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
 
     const double estimate = (n_exploit > 0) ? mu_exploit : exploration_stats[0].mean;
 
-    // ── Variance estimation ────────────────────────────────────────────────────
+    // -- Variance estimation -----------------------------------------------
     //
     // Var(mu_ASVR) = Var(mu_exploit) = sum_k w_k*^2 * sigma_k^2 / n_k
     //
@@ -194,6 +194,19 @@ ASVRResult AdaptiveVarianceReduction::run(std::vector<std::pair<std::string, Sam
     //
     // sigma_k^2 is estimated from exploration sample variance (unbiased).
 
+    // KNOWN THEORETICAL LIMITATION: we use the exploration sample variance to estimate
+    // the variance that the exploitation batch will achieve.  This is unbiased for
+    // strategies whose estimator variance is constant across batch sizes (plain MC,
+    // antithetic, stratified, QMC, IS, etc.).
+    //
+    // For control-variate (CV) strategies the OLS beta is re-estimated inside each
+    // batch, so the effective variance depends weakly on batch size: larger batches
+    // produce a tighter beta estimate and therefore slightly lower variance.  The
+    // exploration batch is typically much smaller than the exploitation batch, so the
+    // exploration variance slightly over-estimates the exploitation variance for CV
+    // strategies.  In practice this causes ASVR to marginally under-allocate samples
+    // to CV strategies, but the effect is small (O(1/n_explore)) and does not affect
+    // unbiasedness of the final estimate.
     double var_exploit = 0.0;
     for (size_t k = 0; k < K; ++k) {
         if (exploit_counts[k] > 0) {
