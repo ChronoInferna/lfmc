@@ -1,9 +1,9 @@
 #pragma once
 
+#include "lfmc/core/types.hpp"
 #include "lfmc/numerical_scheme/numerical_scheme.hpp"
 #include "lfmc/payoff/payoff.hpp"
 #include "lfmc/stochastic_process/stochastic_process.hpp"
-#include "lfmc/core/types.hpp"
 
 #include <cassert>
 #include <cstdint>

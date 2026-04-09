@@ -1,4 +1,5 @@
 #include "lfmc/payoff/barrier_payoffs.hpp"
+
 #include "lfmc/core/types.hpp"
 
 #include <algorithm>

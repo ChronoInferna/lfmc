@@ -1,4 +1,5 @@
 #include "lfmc/estimator/monte_carlo_estimator.hpp"
+
 #include "lfmc/core/types.hpp"
 
 #include <vector>

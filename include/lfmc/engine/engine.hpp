@@ -1,11 +1,11 @@
 #pragma once
 
 #include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/core/types.hpp"
 #include "lfmc/numerical_scheme/numerical_scheme.hpp"
 #include "lfmc/payoff/payoff.hpp"
 #include "lfmc/stochastic_process/stochastic_process.hpp"
 #include "lfmc/strategy/strategies.hpp"
-#include "lfmc/core/types.hpp"
 
 #include <algorithm>
 #include <cassert>

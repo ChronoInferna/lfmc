@@ -2,16 +2,16 @@
 #include "lfmc/estimator/estimator.hpp"
 #include "lfmc/estimator/monte_carlo_estimator.hpp"
 #include "lfmc/numerical_scheme/euler_maruyama.hpp"
-#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/path_generator/path_generator.hpp"
 #include "lfmc/payoff/asian_payoffs.hpp"
 #include "lfmc/payoff/barrier_payoffs.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
 #include "lfmc/payoff/lookback_payoffs.hpp"
 #include "lfmc/pipeline/pipeline.hpp"
 #include "lfmc/random_source/pseudo_random_source.hpp"
 #include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
-#include "lfmc/timing/timing.hpp"
-#include "lfmc/path_generator/path_generator.hpp"
 #include "lfmc/strategy/strategies.hpp"
+#include "lfmc/timing/timing.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
