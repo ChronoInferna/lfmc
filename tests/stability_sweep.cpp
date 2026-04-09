@@ -5,12 +5,15 @@
 //   - Gap between engine and best fixed
 // Flags any option type whose engine ratio varies >20% between Runs=15 and Runs=100.
 
-#include "lfmc/adaptive_estimator.hpp"
-#include "lfmc/engine.hpp"
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/strategies.hpp"
+#include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/engine/engine.hpp"
+#include "lfmc/numerical_scheme/euler_maruyama.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/payoff/asian_payoffs.hpp"
+#include "lfmc/payoff/barrier_payoffs.hpp"
+#include "lfmc/payoff/lookback_payoffs.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
+#include "lfmc/strategy/strategies.hpp"
 
 #include <algorithm>
 #include <cmath>

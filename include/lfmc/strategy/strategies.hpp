@@ -1,14 +1,11 @@
 #pragma once
 
-// All 6 new variance reduction strategy factories.
-// Each factory returns a SamplerFn: (n_samples, seed) -> vector<double>.
-// The seed guarantees RNG independence between strategies and ASVR phases.
-
-#include "lfmc/adaptive_estimator.hpp"
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/types.hpp"
+#include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/core/types.hpp"
+#include "lfmc/numerical_scheme/numerical_scheme.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/payoff/payoff.hpp"
+#include "lfmc/stochastic_process/stochastic_process.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -20,8 +17,7 @@
 
 namespace lfmc::detail {
 
-// --- Acklam's inverse normal CDF -----------------------------------------------
-// Rational approximation accurate to ~5e-9 over (0, 1).
+// Acklam's inverse normal CDF — rational approximation accurate to ~5e-9.
 // Reference: Peter J. Acklam, "An algorithm for computing the inverse normal
 // cumulative distribution function", 2010.
 inline double normal_icdf(double p) noexcept {
@@ -53,9 +49,7 @@ inline double normal_icdf(double p) noexcept {
            ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1.0);
 }
 
-// --- Halton radical inverse -----------------------------------------------
-// Returns the i-th term (1-indexed) of the Van der Corput sequence in `base`.
-// Output in (0, 1). Caller must pass i >= 1.
+// Halton radical inverse — i-th term (1-indexed) of the Van der Corput sequence
 inline double halton(size_t i, int base) noexcept {
     double result = 0.0;
     double f = 1.0 / static_cast<double>(base);
@@ -68,8 +62,7 @@ inline double halton(size_t i, int base) noexcept {
     return result;
 }
 
-// --- First n primes (sieve of Eratosthenes) ---------------------------------
-// Used by Halton QMC: dimension d gets the d-th prime as its base.
+// First n primes via sieve of Eratosthenes — used for Halton QMC
 inline std::vector<int> first_n_primes(size_t n) {
     std::vector<int> primes;
     primes.reserve(n);
@@ -93,11 +86,7 @@ inline std::vector<int> first_n_primes(size_t n) {
 
 namespace lfmc {
 
-// --- Strategy 5: Stratified sampling ----------------------------------------
-// Stratifies only the first Brownian increment dimension (the one with highest
-// correlation to the terminal price). Remaining dimensions are pseudo-random.
-// The n strata are [(i/n, (i+1)/n)] for i=0..n-1; one uniform is drawn from
-// each stratum and converted to N(0,1) via normal_icdf.
+// Stratified sampling — first dimension stratified, remaining dimensions pseudo-random
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_stratified_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
                                   size_t steps, double T) {
@@ -129,15 +118,7 @@ SamplerFn make_stratified_sampler(SP process, NS scheme, std::shared_ptr<Payoff>
     };
 }
 
-// --- Strategy 6: Halton QMC with random shift -------------------------------
-// Generates a `steps`-dimensional Halton sequence. Each dimension is shifted
-// by a random uniform (derived from the seed) before converting to N(0,1).
-// The random shift randomises the sequence per ASVR phase while preserving
-// the low-discrepancy property within each call.
-//
-// Known limitation: Halton sequences have inter-dimensional correlation for
-// large dimension counts (steps > ~20). ASVR will automatically assign low
-// weight to this strategy for path-dependent options where all steps matter.
+// Halton QMC with random shift — low-discrepancy sequences with Owen-style randomisation
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_halton_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff, size_t steps,
                               double T) {
@@ -171,28 +152,7 @@ SamplerFn make_halton_sampler(SP process, NS scheme, std::shared_ptr<Payoff> pay
     };
 }
 
-// --- Strategy 7: Importance sampling (exponential tilting) ---------------------
-// Tilts all normal draws using a TOTAL drift parameter `theta`, distributed
-// evenly as theta/sqrt(steps) per time step. This parameterisation makes theta
-// dimensionally consistent regardless of the number of steps:
-//
-//   Z_t ~ N(theta/sqrt(steps), 1)  under importance measure Q
-//   per-step shift: delta = theta / sqrt(steps)
-//
-// The Radon-Nikodym correction weight is:
-//   w = exp(-delta * sum_t(Z_t) + 0.5 * delta^2 * steps)
-//     = exp(-theta/sqrt(steps) * sum_t(Z_t) + 0.5 * theta^2)
-//
-// This is equivalent to shifting the terminal log-price by sigma*theta*sqrt(dt)*steps
-// = sigma*theta*sqrt(T). It matches the single-normal exact simulation where shifting
-// Z by theta yields the same log-price change.
-//
-// Choosing theta:
-//   theta = 0        → plain MC
-//   theta > 0        → tilts S_T upward; beneficial for OTM calls
-//   theta < 0        → tilts S_T downward; beneficial for OTM puts / barrier knock-ins
-//   practical range  → |theta| in [0, 2]; beyond 2 the Radon-Nikodym weight
-//                      exp(-0.5*theta^2) shrinks too fast and variance increases
+// Importance sampling with exponential tilting — apply drift theta to all normal draws
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_importance_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
                                   size_t steps, double T, double theta) {
@@ -229,13 +189,7 @@ SamplerFn make_importance_sampler(SP process, NS scheme, std::shared_ptr<Payoff>
         };
 }
 
-// --- Strategy 8: Moment matching -----------------------------------------------
-// Generates all n * steps normals up front (step-major layout for cache
-// efficiency in the rescaling pass), then rescales each time step's n draws
-// to have exact sample mean = 0 and sample std = 1. This eliminates first-
-// order sampling error in every dimension simultaneously.
-//
-// Memory: O(n * steps) doubles. For n=10,000 and steps=52 this is ~4 MB.
+// Moment matching — rescale each time step to exact sample mean=0, std=1
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_moment_matching_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
                                        size_t steps, double T) {
@@ -287,11 +241,7 @@ SamplerFn make_moment_matching_sampler(SP process, NS scheme, std::shared_ptr<Pa
     };
 }
 
-// --- Strategy 9: Latin Hypercube Sampling -----------------------------------
-// In each of the `steps` dimensions independently: generates n stratified
-// uniform samples (one per stratum), randomly permutes them (so different
-// dimensions are uncorrelated), then converts to N(0,1) via normal_icdf.
-// Guarantees exact coverage of every marginal distribution.
+// Latin Hypercube Sampling — stratified uniforms shuffled to decorrelate dimensions
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_lhs_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff, size_t steps,
                            double T) {
@@ -333,17 +283,7 @@ SamplerFn make_lhs_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff
     };
 }
 
-// --- Strategy 10: Stratified + Antithetic ------------------------------------
-// Combines stratified sampling on the first dimension with antithetic variates.
-// For n requested samples, generates n pairs:
-//   - Stratum i: u_i = (i + U) / n → z_1 = normal_icdf(u_i)
-//   - Positive path: (z_1, z_2, ..., z_steps) with z_{2..steps} ~ N(0,1)
-//   - Negative path: (-z_1, z_2, ..., z_steps) with the SAME remaining draws
-//   - Returned sample i = 0.5 * (payoff(pos_path) + payoff(neg_path))
-//
-// Sharing z_{2..steps} between both paths of a pair gives variance reduction
-// not only from the first-dimension antithetic pairing but also from the
-// correlated higher dimensions within the pair.
+// Stratified + Antithetic — combines first-dimension stratification with antithetic pairs
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_stratified_antithetic_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
                                              size_t steps, double T) {
@@ -384,15 +324,7 @@ SamplerFn make_stratified_antithetic_sampler(SP process, NS scheme, std::shared_
     };
 }
 
-// --- Convenience: build all 10 standard strategies ----------------------------
-// Assembles the canonical 10-strategy vector for a given payoff on GBM +
-// Euler-Maruyama. The control variate strategies use EuropeanCall(0.0) as the
-// control (= S_T) with control_mean = S0 * exp(mu * T).
-// For path-dependent options where S_T is a poor control, the CV strategies
-// will receive low precision weights from ASVR automatically.
-//
-// halton_qmc is tagged StrategyType::QMC so the iterative engine can use
-// empirical variance-of-mean rather than per-sample variance to weight it.
+// Build all 10 standard strategies — control variates use EuropeanCall(0.0) as control (= S_T)
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 std::vector<NamedStrategy> build_all_strategies(SP process, NS scheme,
                                                 std::shared_ptr<Payoff> payoff, double control_mean,

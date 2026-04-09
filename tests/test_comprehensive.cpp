@@ -1,29 +1,13 @@
-// tests/test_comprehensive.cpp
-//
-// Comprehensive test suite for the LFMC Monte Carlo options pricing engine.
-//
-// Areas covered:
-//   [correctness]   – each VR strategy vs Black-Scholes closed-form
-//   [vr]            – variance reduction ratio per strategy, quantified
-//   [bandit]        – IterativeEngine leader tracking and thread allocation
-//   [asvr]          – AdaptiveVarianceReduction 10%/90% split, weight formula
-//   [coverage]      – 95% CI actually contains true price ~95% of the time
-//   [convergence]   – plain MC error decreases as O(1/sqrt(N))
-//   [edge]          – deep ITM/OTM, zero vol, extreme/negative rates, expiry
-//   [thread]        – concurrent Engine::run calls produce consistent results
-//   [pathgen]       – PathGenerator path-length regression
-//
-// Run all:         ctest -R comprehensive --output-on-failure
-// Run fast only:   ctest -R comprehensive -LE slow
-// Run slow only:   ctest -R comprehensive -L slow
-
-#include "lfmc/adaptive_estimator.hpp"
-#include "lfmc/engine.hpp"
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/path_generator.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/strategies.hpp"
+#include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/engine/engine.hpp"
+#include "lfmc/numerical_scheme/euler_maruyama.hpp"
+#include "lfmc/path_generator/path_generator.hpp"
+#include "lfmc/payoff/asian_payoffs.hpp"
+#include "lfmc/payoff/barrier_payoffs.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/payoff/lookback_payoffs.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
+#include "lfmc/strategy/strategies.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -40,10 +24,6 @@
 using namespace lfmc;
 using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
-
-// ---------------------------------------------------------------------------
-// Reference pricing utilities
-// ---------------------------------------------------------------------------
 
 namespace ref {
 
@@ -77,10 +57,6 @@ static double undiscounted_put(double S, double K, double r, double sigma, doubl
 }
 
 } // namespace ref
-
-// ---------------------------------------------------------------------------
-// Test fixtures / shared helpers
-// ---------------------------------------------------------------------------
 
 static constexpr double S0 = 100.0;
 static constexpr double MU = 0.05; // also used as the risk-free rate

@@ -9,11 +9,14 @@
 //
 // Run standalone: compile and link with lfmc, then ./bench
 
-#include "lfmc/adaptive_estimator.hpp"
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/strategies.hpp"
+#include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/numerical_scheme/euler_maruyama.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/payoff/asian_payoffs.hpp"
+#include "lfmc/payoff/barrier_payoffs.hpp"
+#include "lfmc/payoff/lookback_payoffs.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
+#include "lfmc/strategy/strategies.hpp"
 
 #include <cmath>
 #include <cstdio>

@@ -1,11 +1,17 @@
-#include "lfmc/adaptive_estimator.hpp"
-#include "lfmc/estimator.hpp"
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/pipeline.hpp"
-#include "lfmc/random_source.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/timing.hpp"
+#include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/estimator/estimator.hpp"
+#include "lfmc/estimator/monte_carlo_estimator.hpp"
+#include "lfmc/numerical_scheme/euler_maruyama.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/payoff/asian_payoffs.hpp"
+#include "lfmc/payoff/barrier_payoffs.hpp"
+#include "lfmc/payoff/lookback_payoffs.hpp"
+#include "lfmc/pipeline/pipeline.hpp"
+#include "lfmc/random_source/pseudo_random_source.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
+#include "lfmc/timing/timing.hpp"
+#include "lfmc/path_generator/path_generator.hpp"
+#include "lfmc/strategy/strategies.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -17,9 +23,6 @@
 using namespace lfmc;
 using Catch::Matchers::WithinAbs;
 
-// ----------------------------------------------------------------
-// Black-Scholes closed-form helpers for ground truth
-// ----------------------------------------------------------------
 namespace bs {
 
 static double norm_cdf(double x) {
@@ -44,17 +47,6 @@ double european_call_undiscounted(double S, double K, double r, double sigma, do
 
 } // namespace bs
 
-// ----------------------------------------------------------------
-// Convergence runner: runs pipeline at increasing sample counts
-// and prints a table of results vs ground truth.
-//
-// DESIGN NOTE: MonteCarloEstimator has a hardcoded convergence
-// threshold of 10,000 samples and takes no constructor parameters.
-// All tiers therefore converge at the same 10,000 samples - the
-// tier values in sample_tiers are informational only. Each tier
-// creates a fresh Pipeline with seed=42, so all estimates are
-// independent draws from a 10,000-sample estimator.
-// ----------------------------------------------------------------
 struct ConvergenceResult {
     std::size_t samples;
     double estimate;
@@ -111,9 +103,6 @@ run_convergence(const std::string& label, PayoffFactory make_payoff, double grou
     return results;
 }
 
-// ----------------------------------------------------------------
-// Shared parameters
-// ----------------------------------------------------------------
 static constexpr double S0 = 100.0;
 static constexpr double K = 100.0;
 static constexpr double B_UP = 120.0; // Up-and-out barrier
@@ -126,13 +115,7 @@ static constexpr int STEPS = 252;
 // Only 3 tiers since MonteCarloEstimator always converges at 10k regardless
 static const std::vector<std::size_t> TIERS = {1000, 5000, 10000};
 
-// ----------------------------------------------------------------
-// MC reference price helper
-//
-// Uses 500k plain MC samples with the same GBM + Euler + discrete steps
-// as the convergence tests. Provides a near-noiseless arithmetic reference
-// for payoffs with no closed form (arithmetic Asian, discrete barrier).
-// ----------------------------------------------------------------
+// MC reference price helper — uses 500k plain MC samples for near-noiseless arithmetic reference
 static double mc_reference_price(std::shared_ptr<Payoff> payoff, size_t steps) {
     GeometricBrownianMotion gbm(MU, SIGMA, S0);
     EulerMaruyama<GeometricBrownianMotion> euler;
@@ -143,10 +126,6 @@ static double mc_reference_price(std::shared_ptr<Payoff> payoff, size_t steps) {
         sum += x;
     return sum / static_cast<double>(s.size());
 }
-
-// ----------------------------------------------------------------
-// Tests
-// ----------------------------------------------------------------
 
 TEST_CASE("Asian Call convergence", "[exotic][convergence][asian]") {
     // Reference: 500k-sample plain MC arithmetic Asian Call with STEPS=252 discrete steps.

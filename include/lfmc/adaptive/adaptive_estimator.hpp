@@ -1,9 +1,9 @@
 #pragma once
 
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/types.hpp"
+#include "lfmc/numerical_scheme/numerical_scheme.hpp"
+#include "lfmc/payoff/payoff.hpp"
+#include "lfmc/stochastic_process/stochastic_process.hpp"
+#include "lfmc/core/types.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -17,17 +17,10 @@
 
 namespace lfmc {
 
-// A strategy sampler: given n samples and a seed, returns n iid samples of the
-// (possibly variance-reduced) payoff estimator. The seed guarantees RNG independence
-// between strategies and between exploration/exploitation phases.
+// Strategy sampler: (n_samples, seed) -> n iid payoff samples (possibly variance-reduced)
 using SamplerFn = std::function<std::vector<double>(size_t n_samples, uint64_t seed)>;
 
-// --- Strategy type tag ---------------------------------------------------
-// MC:  standard pseudo-random estimator; per-sample variance is the right
-//      precision signal for the bandit.
-// QMC: quasi-random estimator (Halton, Sobol, ...); per-sample variance equals
-//      plain MC's (same payoff distribution) and is therefore useless as a
-//      bandit signal.  The engine uses empirical variance-of-mean instead.
+// Strategy type tag — MC uses per-sample variance for bandit signal, QMC uses variance-of-mean
 enum class StrategyType { MC, QMC };
 
 // Named strategy: bundles a sampler with its display name and type tag.
@@ -74,28 +67,9 @@ struct ASVRConfig {
     size_t min_exploration_per_strategy = 100;
 };
 
-// --- ASVR Algorithm -------------------------------------------------------
-//
-// Phase 1 (Exploration): K strategies run in parallel, each generating
-//   n_explore_each = max(min_per_strategy, alpha*N/K) samples.
-//   Each strategy uses seed make_seed(k, 0) for full RNG independence.
-//
-// Weight computation: w_k* = (1/sigma_k^2) / sum_j(1/sigma_j^2)
-//   (inverse-variance / "precision" weighting)
-//
-// Phase 2 (Exploitation): strategy k receives n_k = floor(w_k* * n_exploit) samples,
-//   each run using seed make_seed(k, 1) - independent of the exploration phase.
-//   Strategies with n_k > 0 run in parallel.
-//
-// Combination (unbiased by independence):
-//   mu_explore = (1/K) * sum_k mu_k^explore      (equal-weight pooled)
-//   mu_exploit = sum_k w_k* * mu_k^exploit        (precision-weighted)
-//   mu_ASVR    = alpha * mu_explore + (1-alpha) * mu_exploit
-//
-// The key unbiasedness guarantee: w_k* depends only on exploration samples;
-// exploitation samples are generated with fresh RNG seeds and are therefore
-// independent of the weight selection event.
-
+// ASVR Algorithm — Phase 1: explore K strategies, Phase 2: exploit weighted subset.
+// Key property: weight selection depends only on exploration data; exploitation uses
+// fresh seeds and is independent of the weight selection event.
 class AdaptiveVarianceReduction {
   public:
     static ASVRResult run(std::vector<NamedStrategy> strategies, size_t total_samples,
@@ -108,13 +82,9 @@ class AdaptiveVarianceReduction {
     static std::vector<double> compute_precision_weights(const std::vector<StrategyStats>& stats);
 };
 
-// --- Internal utilities ---------------------------------------------------
-
 namespace detail {
 
-// Splitmix64-based seed derivation: strategy k, phase p → unique uint64_t seed.
-// Two calls with the same (k, p) give the same seed; different (k, p) pairs are
-// statistically independent because they hit different streams of splitmix64.
+// Splitmix64-based seed derivation — deterministic: same (k,p) → same seed
 inline uint64_t make_seed(size_t k, size_t phase) noexcept {
     uint64_t x = (static_cast<uint64_t>(k) * 0x9e3779b97f4a7c15ULL) ^
                  (static_cast<uint64_t>(phase) * 0x6c62272e07bb0142ULL) ^ 0xdeadbeefcafe0000ULL;
@@ -135,8 +105,7 @@ inline std::vector<double> gen_normals(size_t n, std::mt19937_64& rng) {
     return v;
 }
 
-// Correct single-path generator (avoids the pre-allocate + push_back double-length bug
-// present in the existing PathGenerator)
+// Generate a single path from normals (avoids double-length bug in PathGenerator)
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 Path generate_path(const SP& process, const NS& scheme, const Normals& normals, size_t steps,
                    double T) {
@@ -154,8 +123,7 @@ Path generate_path(const SP& process, const NS& scheme, const Normals& normals, 
     return path;
 }
 
-// Unbiased sample mean and variance (Welford would be more numerically stable for large n,
-// but two-pass is fine for the batch sizes used here)
+// Unbiased sample mean and variance — two-pass is sufficient for batch sizes used
 inline std::pair<double, double> mean_variance(const std::vector<double>& samples) {
     assert(!samples.empty());
     const double n = static_cast<double>(samples.size());
@@ -175,13 +143,7 @@ inline std::pair<double, double> mean_variance(const std::vector<double>& sample
 
 } // namespace detail
 
-// --- Strategy factory functions -------------------------------------------
-//
-// Each factory captures the pricing parameters and returns a SamplerFn.
-// The SamplerFn is called with (n_samples, seed) and returns exactly n_samples
-// iid draws from the (possibly variance-reduced) estimator of E[payoff].
-
-// Plain pseudo-random Monte Carlo - baseline strategy
+// Plain pseudo-random Monte Carlo — baseline strategy
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_plain_mc_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff, size_t steps,
                                 double T) {
@@ -200,9 +162,7 @@ SamplerFn make_plain_mc_sampler(SP process, NS scheme, std::shared_ptr<Payoff> p
     };
 }
 
-// Antithetic variates - each sample is (payoff(Z) + payoff(-Z)) / 2
-// Returns n samples, each consuming one pair of paths. Variance is reduced
-// because the two paths are negatively correlated for monotone payoffs.
+// Antithetic variates — (payoff(Z) + payoff(-Z)) / 2 for each sample
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_antithetic_sampler(SP process, NS scheme, std::shared_ptr<Payoff> payoff,
                                   size_t steps, double T) {
@@ -230,11 +190,7 @@ SamplerFn make_antithetic_sampler(SP process, NS scheme, std::shared_ptr<Payoff>
     };
 }
 
-// Control variates with in-batch OLS beta estimation.
-// target_payoff: the option price we're estimating
-// control_payoff: a payoff with known expectation `control_mean`
-//   (e.g. EuropeanCall(0.0) gives S_T; E[S_T] = S0 * exp(mu*T))
-// Returns: X_i - beta_hat * (Y_i - E[Y]) for each i
+// Control variates with in-batch OLS beta estimation — X_i - beta_hat * (Y_i - E[Y])
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_control_variate_sampler(SP process, NS scheme, std::shared_ptr<Payoff> target,
                                        std::shared_ptr<Payoff> control, double control_mean,
@@ -282,8 +238,7 @@ SamplerFn make_control_variate_sampler(SP process, NS scheme, std::shared_ptr<Pa
     };
 }
 
-// Antithetic + control variates combined.
-// Each raw sample is the antithetic average; OLS beta is estimated from those averages.
+// Antithetic + control variates combined — antithetic average with OLS beta from those
 template <StochasticProcess SP, NumericalScheme<SP> NS>
 SamplerFn make_antithetic_cv_sampler(SP process, NS scheme, std::shared_ptr<Payoff> target,
                                      std::shared_ptr<Payoff> control, double control_mean,

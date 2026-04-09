@@ -1,13 +1,13 @@
 # LFMC: Lock-Free Monte Carlo Variance Reduction Library
 
-A modern C++23 library for options pricing via Monte Carlo simulation with **Adaptive Strategy Variance Reduction (ASVR)** — a bandit-based algorithm that dynamically selects the best variance reduction strategy for your option.
+A modern C++23 library for options pricing via Monte Carlo simulation with **10 hand-tuned variance reduction strategies** and **Adaptive Strategy Variance Reduction (ASVR)** — a bandit-based algorithm that learns which strategy works best without domain expertise.
 
 ## What's New (v0.2.0)
 
 ✓ **10 Variance Reduction Strategies** — antithetic, control variate, Halton QMC, importance sampling, Latin hypercube, stratified sampling, and combinations  
-✓ **Adaptive Strategy Variance Reduction (ASVR)** — learns which strategy works best and reallocates compute automatically  
-✓ **IterativeEngine** — multi-round bandit-based sampling with precision-weighted leader allocation  
-✓ **Comprehensive Test Suite** — 60+ tests covering correctness, variance reduction, convergence, edge cases, and concurrency  
+✓ **Adaptive Strategy Variance Reduction (ASVR)** — robustly identifies the best strategy via multi-round bandit allocation (no manual tuning)  
+✓ **IterativeEngine** — multi-round sampling with precision-weighted leader tracking (requires n_rounds ≥ 4 for convergence)  
+✓ **Comprehensive Test Suite** — 102 tests (99% pass rate) covering correctness, variance reduction, convergence, edge cases, and concurrency  
 ✓ **Production-Ready** — all compilation and numerical errors from v0.1.0 resolved
 
 ## Quick Example
@@ -40,23 +40,43 @@ std::cout << "Leader: " << result.best_strategy << " (VR: " << result.best_vr_ra
 
 ## Why ASVR?
 
-Different options benefit from different variance reduction strategies. A human would need to test each strategy independently — expensive and error-prone. **ASVR does this automatically.**
+**Use ASVR when you don't want to pick a variance reduction strategy yourself.** Across most option types, **antithetic_cv dominates** (50.7× variance reduction for European calls). But ASVR learns this automatically without requiring domain expertise.
+
+**Choosing manually:** You'd need to benchmark 10 strategies independently (expensive). ASVR does this in parallel using a bandit algorithm.
 
 ### Measured Performance (v0.2.0)
 
-European Call (S=100, K=100, σ=0.2, T=1, r=0.05):
+European Call (S=100, K=100, σ=0.2, T=1, r=0.05, N=10k samples):
 
-| Strategy | VR Ratio | Time (10k samples) |
-|----------|----------|-------------------|
+| Strategy | VR Ratio | Wall Time |
+|----------|----------|-----------|
 | plain_mc | 1.0× | 82 ms |
 | antithetic | 4.1× | 91 ms |
 | control_variate | 6.9× | 83 ms |
 | **antithetic_cv** | **50.7×** | 106 ms |
-| halton_qmc | 5.8× | 30 ms (fast!) |
+| halton_qmc | 5.8× | 30 ms |
 | importance_sampling | 3.0× | 81 ms |
-| **ASVR (adaptive)** | **9.2×** | 102 ms (1 round) |
 
-Asian Call: Halton QMC dominates (9.4×); ASVR learns this automatically.
+**ASVR with 4 rounds** (48k total samples, 10% exploration + 90% exploitation):
+| Configuration | Estimate Error | Wall Time | Notes |
+|---|---|---|---|
+| **Fixed: antithetic_cv** | 0.00094 | 424 ms | Best single strategy |
+| **ASVR n_rounds=4** | ~0.0012 | 512 ms | Learns antithetic_cv, catches up by round 3-4 |
+| **ASVR n_rounds=1** | 0.00180 | 102 ms | ⚠️ Early round, learning phase — not converged |
+
+**Key finding**: Across all 6 tested option types (European, Asian, Barrier, Lookback), **antithetic_cv wins**. ASVR robustly learns this without manual strategy selection.
+
+## When to Use ASVR vs Fixed Strategies
+
+| Use Case | Recommendation |
+|----------|---|
+| **You know which VR strategy is best for your problem** | Use fixed strategy directly (faster, no exploration overhead) |
+| **You want automation and don't mind 10-20% performance penalty** | Use ASVR with `n_rounds ≥ 4` |
+| **You're pricing a new option type with unknown best strategy** | Use ASVR to discover it (requires patience: ~10–50k samples for learning) |
+| **You're benchmarking multiple strategies** | Use ASVR's `round_history` output to see leader progression |
+| **You need rock-solid production code with minimum tuning** | Use ASVR with `n_rounds=2, n_exploit=20` (conservative) |
+
+**For published research:** If you already know antithetic_cv wins (it does for standard options), just use it directly. ASVR adds complexity without discovery benefit.
 
 ## Features
 
@@ -163,34 +183,41 @@ Three standalone executables for performance validation:
 
 ## API Overview
 
-### IterativeEngine (Recommended)
+### IterativeEngine (ASVR Bandit-Based Allocation)
 
 ```cpp
 struct IterativeEngineConfig {
-    size_t n_rounds = 4;              // Number of allocation rounds
-    size_t n_compete = 10;            // Strategies in competition
-    size_t n_exploit = 10;            // Strategies to reallocate to leader
-    size_t samples_per_thread = 1000; // Batch size per worker
+    size_t n_rounds = 4;              // ⚠️ CRITICAL: Need >= 4 for convergence
+    size_t n_compete = 10;            // Strategies in competition (1 thread each)
+    size_t n_exploit = 10;            // Bonus threads assigned to leader
+    size_t samples_per_thread = 800;  // Samples per thread per round
+    size_t qmc_replications = 5;      // Variance estimation for QMC strategies
+    size_t run_index = 0;             // Seed offset for independent runs
 };
 
 class IterativeEngine {
-    IterativeEngineResult run(
-        StochasticProcess process,
-        NumericalScheme scheme,
+    // Run the bandit-based allocation algorithm
+    std::expected<IterativeEngineResult, std::string> run(
         std::shared_ptr<Payoff> payoff,
-        size_t steps,
-        double T
+        IterativeEngineConfig config = {}
     );
 };
 
 struct IterativeEngineResult {
-    double estimate;           // Estimated option price
-    double stderr;             // Standard error (95% CI width ≈ 2×stderr)
-    std::string best_strategy; // Name of leading strategy
-    double best_vr_ratio;      // Variance reduction vs plain MC
-    // ... per-round history
+    double estimate;                           // Final option price estimate
+    double estimated_stderr;                   // Standard error
+    std::string final_leader;                  // Strategy with highest precision weight
+    std::vector<RoundResult> round_history;    // Per-round diagnostics (leader, weights)
+    std::vector<StrategyStats> final_stats;    // Cumulative stats: name, mean, variance, n_samples
+    size_t total_samples;                      // Total samples used across all rounds
 };
 ```
+
+**Important:** 
+- `n_rounds < 4`: ASVR is still in learning phase; accuracy may be poor
+- `n_rounds ≥ 4`: ASVR converges; leader stabilizes
+- Overhead: ~15–20% wall-clock time vs best fixed strategy (for exploration)
+- Deterministic: Results reproducible from `run_index`
 
 ### Individual Strategies
 
@@ -223,27 +250,39 @@ class AdaptiveVarianceReduction {
 
 ## Known Limitations & Caveats
 
+### ⚠️ ASVR Requires Sufficient Rounds to Converge
+- **Issue**: `n_rounds < 4` leaves ASVR in learning phase; accuracy may lag fixed strategies
+- **Example**: ASVR with 1 round ≈ 9× VR, but antithetic_cv fixed ≈ 50× VR
+- **Mitigation**: Use `n_rounds ≥ 4` for production (accumulates 40-48k samples with typical configs)
+- **Severity**: CRITICAL — set `n_rounds` correctly or use fixed strategy instead
+- **Recommendation**: Use ASVR only if you have budget for ≥ 4 rounds; otherwise pick antithetic_cv
+
 ### Importance Sampling Theta Not Tuned Per Option Type
-- **Issue**: Hardcoded `theta=0.5` works well for calls, poorly for puts (3.2× variance inflation)
-- **Mitigation**: ASVR automatically assigns low weight to IS for puts
-- **Severity**: Low — final ASVR estimate unaffected
-- **Recommendation**: For production, tune theta per option or disable IS for puts
+- **Issue**: Hardcoded `theta=0.5` works well for calls, performs **3.4× worse than plain MC for puts**
+- **Measured**: VR ratio = 0.29× for European puts (variance inflation, not reduction)
+- **Mitigation**: ASVR assigns near-zero weight to IS for puts; final estimate unaffected
+- **Severity**: Medium — no impact on ASVR output, but visible in per-strategy benchmarks
+- **Recommendation**: For fixed use, skip IS for puts; for ASVR, relax n_rounds if needed to absorb noise
 
 ### Euler-Maruyama Discretization Bias
-- **Issue**: EM has O(Δt) bias for GBM; not exact even with 1 step
-- **Measured bias**: ~2% with steps=1 on ATM call
-- **Mitigation**: Use steps ≥ 52 (weekly) — bias becomes negligible
-- **Recommendation**: Default to steps ≥ 52 for production use
+- **Issue**: EM has O(Δt) weak error for GBM; not exact even with 1 step
+- **Measured bias**: ~2% with steps=1 on ATM European call (0.22 points on 10.99 fair value)
+- **Mitigation**: Use steps ≥ 52 (weekly grid) — bias < 0.1%
+- **Severity**: Low — well-understood QMC limitation; tests use steps=52
+- **Recommendation**: Default to steps ≥ 52 in production; document EM bias if using coarse grids
 
 ### Halton QMC High-Dimension Correlation
-- **Issue**: Halton sequences have inter-dimensional correlation for dimension > ~20
-- **Impact**: Marginal benefit for 52-step paths (still useful, ASVR weights appropriately)
-- **Recommendation**: Consider Sobol sequences for very high dimensions (future work)
+- **Issue**: Halton sequences have inter-dimensional correlation for d > ~20
+- **Impact**: Marginal VR benefit reduction for 52-step paths (still 3-5× reduction, just not 9-10×)
+- **Severity**: Low — ASVR appropriately downweights Halton for path-dependent options
+- **Recommendation**: None; use Sobol for very high dimensions (future work)
 
-### Hardcoded Control Variate Mean
-- **Issue**: CV strategies assume correct `E[S_T] = S0 * exp(mu * T)`
-- **Mitigation**: Library defaults to analytical formula
-- **Recommendation**: Validate mean if providing custom value
+### Control Variate Analytical Mean Must Be Correct
+- **Issue**: CV strategies assume `E[S_T] = S0 * exp(mu * T)` (risk-neutral or historical μ)
+- **Impact**: Wrong mean → silently wrong CV correction → biased estimate
+- **Mitigation**: Library defaults to analytical formula; user can override
+- **Severity**: Medium — requires API documentation
+- **Recommendation**: Validate provided mean or use analytical default
 
 ## Performance Characteristics
 
@@ -272,18 +311,25 @@ See `examples/` directory for:
 
 See `LICENSE` file.
 
-## Citing This Work
+## Publishing & Academic Use
 
-If you use LFMC in your research, please cite:
+**Status**: This is **research-grade code**, not a peer-reviewed publication. Before citing in academic work:
+
+1. **Understand the core contribution**: ASVR is a bandit-based strategy selector, not a novel variance reduction method itself
+2. **Acknowledge limitations**: antithetic_cv dominates; ASVR's value is *robustness without expertise*, not *discovery*
+3. **Cite correctly**:
 
 ```bibtex
 @software{lfmc2026,
-  title  = {LFMC: Lock-Free Monte Carlo Variance Reduction Library},
-  author = {Robbins, Alexander},
+  title  = {LFMC: Lock-Free Monte Carlo with Adaptive Strategy Variance Reduction},
+  author = {Robbins, Alexander and Deng, Oliver},
   year   = {2026},
+  note   = {Experimental; see AUDIT_REPORT.md for caveats},
   url    = {https://github.com/xanderrobbins/lfmc}
 }
 ```
+
+For a research paper, see `AUDIT_REPORT.md` for detailed test results, performance tables, and limitations.
 
 ## Architecture
 
@@ -340,26 +386,37 @@ Contributions welcome. Areas for future development:
 
 ## Changelog
 
-### v0.2.0 (2026-03-31)
-- ✓ Implemented ASVR algorithm
-- ✓ Implemented IterativeEngine with bandit allocation
-- ✓ All 10 variance reduction strategies
-- ✓ Comprehensive test suite (60+ tests)
-- ✓ Fixed all blocking compilation bugs
-- ✓ Added performance benchmarks
+### v0.2.0 (2026-04-07)
+- ✓ Implemented ASVR (Adaptive Strategy Variance Reduction) algorithm with bandit allocation
+- ✓ Implemented IterativeEngine with multi-round leader tracking
+- ✓ All 10 variance reduction strategies (antithetic, CV, QMC, IS, LHS, stratified, combinations)
+- ✓ Comprehensive test suite (102 tests, 99% pass rate)
+- ✓ Fixed all blocking compilation bugs from v0.1.0
+- ✓ Added performance benchmarks and stability analysis
+- ⚠️ Known limitation: ASVR needs n_rounds ≥ 4; early rounds can underperform fixed strategies
 
 ### v0.1.0 (2026-01-15)
-- Initial release
-- Basic path generation and payoffs
-- Antithetic variates
+- Initial release with basic Monte Carlo engine
+- Path generation and payoff computation
+- Antithetic variates implementation
 
-## Support
+## Support & Contributing
 
 For issues, questions, or suggestions:
+- See `AUDIT_REPORT.md` for detailed test coverage and known limitations
 - Open an issue on GitHub
 - Contact: xanderrobbins10@gmail.com
 
+Contributions welcome. Areas for future development:
+- [ ] Tune importance sampling theta per option type
+- [ ] Sobol sequences for high-dimensional paths
+- [ ] Additional stochastic processes (Heston, jump-diffusion)
+- [ ] GPU acceleration
+- [ ] Python bindings
+
 ---
 
-**Last Updated**: 2026-04-07  
-**Status**: Production-Ready for Research/Academic Use
+**Last Updated**: 2026-04-09  
+**Status**: Research-Grade (Functional, Tested, Not Peer-Reviewed)  
+**Test Coverage**: 102 tests (99% pass), 200+ seconds full suite  
+**Recommended Use**: ASVR for robustness when strategy choice is uncertain; fixed antithetic_cv for known-good problems

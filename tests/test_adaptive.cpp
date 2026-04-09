@@ -1,7 +1,7 @@
-#include "lfmc/adaptive_estimator.hpp"
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/stochastic_process.hpp"
+#include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/numerical_scheme/euler_maruyama.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -10,9 +10,7 @@
 
 using namespace lfmc;
 
-// --- Black-Scholes closed-form price ----------------------------------------
-// Used as the ground truth to verify unbiasedness.
-
+// Black-Scholes closed-form price — ground truth for unbiasedness verification
 static double standard_normal_cdf(double x) {
     return 0.5 * std::erfc(-x / std::sqrt(2.0));
 }
@@ -23,18 +21,7 @@ static double bs_call(double S, double K, double r, double sigma, double T) {
     return S * standard_normal_cdf(d1) - K * std::exp(-r * T) * standard_normal_cdf(d2);
 }
 
-// --- Shared test parameters -------------------------------------------------
-// ATM European call on GBM: S0=100, K=100, mu=0.05, sigma=0.2, T=1
-//
-// The library computes the UNDISCOUNTED expected payoff E[max(S_T-K,0)].
-// With mu = risk-free rate r, the physical and risk-neutral measures coincide,
-// so the correct reference is:
-//
-//   E[max(S_T-K,0)] = BS_call(S0,K,r,sigma,T) * exp(r*T)
-//                   ≈ 10.45 * exp(0.05) ≈ 10.99
-//
-// The Black-Scholes discounted price is NOT the right comparison target here.
-
+// ATM European call on GBM — reference is undiscounted E[max(S_T-K,0)] = BS_call * exp(r*T)
 static constexpr double S0 = 100.0;
 static constexpr double MU = 0.05;
 static constexpr double SIGMA = 0.2;
@@ -67,8 +54,6 @@ static std::vector<NamedStrategy> build_strategies() {
                                     std::make_shared<EuropeanCall>(0.0), CONTROL_MEAN, STEPS, T)},
     };
 }
-
-// --- Tests ------------------------------------------------------------------
 
 TEST_CASE("ASVR: estimate is close to undiscounted expected payoff") {
     // ASVR with 20 000 total samples.
@@ -169,12 +154,6 @@ TEST_CASE("ASVR: sample budget splits correctly") {
         exploit_sum += c;
     REQUIRE(exploit_sum == result.n_exploitation);
 }
-
-// --- Empirical variance comparison ------------------------------------------
-//
-// This test is the paper-quality benchmark: run both ASVR and plain MC many
-// times, compute empirical MSE for each, and verify ASVR MSE < plain MC MSE.
-// It is slower (~seconds) but produces the core empirical result.
 
 TEST_CASE("ASVR: empirical MSE lower than plain MC with same sample budget", "[.slow]") {
     // Use a fixed reference: the mean of a large plain MC run as the "true" value.

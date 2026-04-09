@@ -1,9 +1,12 @@
-#include "lfmc/adaptive_estimator.hpp"
-#include "lfmc/engine.hpp"
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/strategies.hpp"
+#include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/engine/engine.hpp"
+#include "lfmc/numerical_scheme/euler_maruyama.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/payoff/asian_payoffs.hpp"
+#include "lfmc/payoff/barrier_payoffs.hpp"
+#include "lfmc/payoff/lookback_payoffs.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
+#include "lfmc/strategy/strategies.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -24,8 +27,6 @@ static Engine<GeometricBrownianMotion, EulerMaruyama<GeometricBrownianMotion>> m
     return {GeometricBrownianMotion{MU, SIGMA, S0}, EulerMaruyama<GeometricBrownianMotion>{},
             CONTROL_MEAN, STEPS, T};
 }
-
-// --- Smoke tests -----------------------------------------------------------
 
 TEST_CASE("Engine: returns a valid positive estimate for European call") {
     auto engine = make_engine();
@@ -125,10 +126,6 @@ TEST_CASE("Engine: works with barrier option payoff") {
     REQUIRE(result->estimate >= 0.0);
 }
 
-// --- Leader stability test --------------------------------------------------
-// With enough samples per round, the leader should stabilise and not switch in
-// late rounds (once we have enough data to distinguish strategies reliably).
-
 TEST_CASE("Engine: leader stabilises over rounds") {
     auto engine = make_engine();
 
@@ -155,8 +152,6 @@ TEST_CASE("Engine: leader stabilises over rounds") {
     // Allow at most 1 late switch - the leader might flip once as estimates refine
     REQUIRE(late_changes <= 1);
 }
-
-// --- Empirical MSE comparison -----------------------------------------------
 
 TEST_CASE("Engine: empirical MSE vs fixed strategies", "[bench]") {
     static constexpr size_t TOTAL = 48000;

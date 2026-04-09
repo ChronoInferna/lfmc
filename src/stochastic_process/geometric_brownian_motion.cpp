@@ -1,4 +1,4 @@
-#include "lfmc/stochastic_process.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
 
 namespace lfmc {
 

@@ -1,8 +1,11 @@
-#include "lfmc/adaptive_estimator.hpp"
-#include "lfmc/numerical_scheme.hpp"
-#include "lfmc/payoff.hpp"
-#include "lfmc/stochastic_process.hpp"
-#include "lfmc/strategies.hpp"
+#include "lfmc/adaptive/adaptive_estimator.hpp"
+#include "lfmc/numerical_scheme/euler_maruyama.hpp"
+#include "lfmc/payoff/european_payoffs.hpp"
+#include "lfmc/payoff/asian_payoffs.hpp"
+#include "lfmc/payoff/barrier_payoffs.hpp"
+#include "lfmc/payoff/lookback_payoffs.hpp"
+#include "lfmc/stochastic_process/geometric_brownian_motion.hpp"
+#include "lfmc/strategy/strategies.hpp"
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -12,7 +15,6 @@
 
 using namespace lfmc;
 
-// --- Shared market parameters -----------------------------------------------
 // ATM European-style: S0=100, K=100, mu=r=0.05, sigma=0.2, T=1y, 52 steps
 static constexpr double S0 = 100.0;
 static constexpr double MU = 0.05;
@@ -42,8 +44,6 @@ static std::pair<double, double> stats(const std::vector<double>& v) {
     return {mean, sq / (n - 1.0)};
 }
 
-// --- Smoke tests: each sampler returns the requested count -------------------
-
 TEST_CASE("strategies: all 10 samplers return requested sample count") {
     auto payoff = std::make_shared<EuropeanCall>(K);
     auto strategies = build_all_strategies(GBM, EULER, payoff, CONTROL_MEAN, STEPS, T);
@@ -54,8 +54,6 @@ TEST_CASE("strategies: all 10 samplers return requested sample count") {
         REQUIRE(samples.size() == 100);
     }
 }
-
-// --- Unbiasedness: strategies agree on mean --------------------------------
 
 // Reference mean computed from 200k plain-MC samples (≈ undiscounted E[max(S_T-K,0)])
 static double plain_mc_ref(std::shared_ptr<Payoff> payoff, size_t n = 200'000) {

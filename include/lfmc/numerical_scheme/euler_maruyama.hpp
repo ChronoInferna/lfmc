@@ -1,17 +1,10 @@
 #pragma once
 
-#include "lfmc/stochastic_process.hpp"
+#include "lfmc/stochastic_process/stochastic_process.hpp"
 
 #include <cmath>
-#include <concepts>
 
 namespace lfmc {
-
-template <typename S, typename P>
-concept NumericalScheme =
-    requires(S const& s, P const& p, double t, double x, double dt, double z) {
-        { s.step(p, t, x, dt, z) } -> std::convertible_to<double>;
-    };
 
 // Euler-Maruyama discretisation of a generic SDE:
 //   X_{t+dt} = X_t + drift(t, X_t)*dt + diffusion(t, X_t)*sqrt(dt)*Z
