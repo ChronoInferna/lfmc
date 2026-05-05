@@ -1,8 +1,9 @@
 #include "lfmc/estimator/monte_carlo_estimator.hpp"
 
-#include <cmath>  // ← ADD THIS for std::sqrt
-#include <limits> // ← ADD THIS for std::numeric_limits
+#include <cmath>
+#include <limits>
 #include <vector>
+
 namespace lfmc {
 
 std::expected<void, std::string>
