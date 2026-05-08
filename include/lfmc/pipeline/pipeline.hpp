@@ -26,25 +26,14 @@ template <StochasticProcess SP, NumericalScheme<SP> NS> class Pipeline {
 
     std::expected<double, std::string> run(size_t steps, double T) {
         while (!estimator_->converged()) {
-            auto normals = random_source_->generate_normals(steps);
-            if (!normals) {
-                return std::unexpected("Failed to generate random normals");
-            }
-
-            auto paths = path_generator_->generate_paths(normals.value(), steps, T);
-            if (!paths) {
-                return std::unexpected("Failed to generate paths");
-            }
-
-            auto payoffs = payoff_->generate_payoffs(paths.value());
-            if (!payoffs) {
-                return std::unexpected("Failed to generate payoffs");
-            }
-
-            auto result = estimator_->add_payoffs(payoffs.value());
-            if (!result) {
-                return std::unexpected(result.error());
-            }
+            auto result =
+                random_source_->generate_normals(steps)
+                    .and_then([&](auto normals) {
+                        return path_generator_->generate_paths(normals, steps, T);
+                    })
+                    .and_then([&](auto paths) { return payoff_->generate_payoffs(paths); })
+                    .and_then([&](auto payoffs) { return estimator_->add_payoffs(payoffs); })
+                    .or_else([](auto error) { return std::unexpected(error); });
         }
 
         return estimator_->result();
