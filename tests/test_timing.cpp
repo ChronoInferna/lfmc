@@ -1,4 +1,4 @@
-#include "lfmc/timing.hpp"
+#include "lfmc/timing/timing.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <thread>

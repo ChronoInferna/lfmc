@@ -20,7 +20,9 @@ set(TEST_SOURCES
     test_timing.cpp
     test_process.cpp
     test_scheme.cpp
-    test_manager.cpp
+    test_pipeline.cpp
+    test_convergency.cpp
+    test_engine.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
